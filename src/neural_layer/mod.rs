@@ -5,7 +5,7 @@ use crate::math::{ActivationFunction, SIGMOID};
 pub struct NeuralLayer {
     w: MatrixF32,
     b: MatrixF32,
-    act_f: ActivationFunction
+    pub(crate) act_f: ActivationFunction
 }
 
 impl NeuralLayer {
@@ -25,7 +25,7 @@ impl NeuralLayer {
 
     pub fn backward(&mut self, delta: MatrixF32, prev: MatrixF32 ,learning_rate: f32) -> MatrixF32 {
         self.w = &self.w - &(&(&prev*&delta)*learning_rate);
-        self.b = &self.b - &delta;
+        self.b = &self.b - &(&delta * learning_rate);
         MatrixF32::new(0, 0)
     }
 }

@@ -1,4 +1,4 @@
-use crate::math::{ActivationFunction, SIGMOID};
+use crate::math::{ActivationFunction, ErrorFunction, SIGMOID};
 use crate::matrix::MatrixF32;
 use crate::neural_layer::NeuralLayer;
 
@@ -25,7 +25,7 @@ impl NeuralNetwork {
         out.clone()
     }
 
-    pub fn backward(&mut self, x: MatrixF32, y: MatrixF32, learning_rate: f32) {
+    pub fn backward(&mut self, x: MatrixF32, y: MatrixF32, cost: ErrorFunction, learning_rate: f32) {
         let mut out = vec![(MatrixF32::new(0, 0), x.clone())];
 
         // Forward pass
@@ -41,7 +41,7 @@ impl NeuralNetwork {
             let (a, z) = out[l+1].clone();
 
             if l == self.layers.len() - 1 {
-                deltas.insert(0, MatrixF32::new(0, 0));
+                deltas.insert(0, &cost.1(a.clone(), y.clone()) * &a.apply(self.layers[l].act_f.1));
             } else {
                 deltas.insert(0, MatrixF32::new(0, 0));
             }

@@ -1,5 +1,5 @@
 use std::ptr::null;
-use crate::math::SIGMOID;
+use crate::math::{MSE, SIGMOID};
 use crate::matrix::MatrixF32;
 use crate::neural_layer::NeuralLayer;
 use crate::neural_network::NeuralNetwork;
@@ -27,7 +27,7 @@ fn main() {
     let output = neural_network.forward(&input);
     println!("Output before backpropagation: {:?}", output);
 
-    neural_network.backward(input.clone(), target_output, learning_rate);
+    neural_network.backward(input.clone(), target_output, MSE, learning_rate);
 
     let output_after_backprop = neural_network.forward(&input);
     println!("Output after backpropagation: {:?}", output_after_backprop);

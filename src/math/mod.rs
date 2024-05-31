@@ -2,10 +2,12 @@ use crate::matrix::MatrixF32;
 
 pub type Function = fn(f32) -> f32;
 pub type ActivationFunction = (Function, Function);
+pub type ErrorFunction = (fn(MatrixF32, MatrixF32) -> f32, fn(MatrixF32, MatrixF32) -> MatrixF32);
 
 pub const SIGMOID: ActivationFunction = (|t| 1.0/(1.0-(-t).exp()), |t| t*(1.0-t));
+pub const MSE: ErrorFunction = (|x, y| mean((&(&x - &y)).elementwise_mul(&x - &y)), |x, y| &x - &y);
 
-pub fn mean(a: &MatrixF32) -> f32 {
+pub fn mean(a: MatrixF32) -> f32 {
     let mut sum: f32 = 0.0;
 
     let rows = a.get_rows();
