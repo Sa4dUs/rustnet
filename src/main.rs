@@ -24,11 +24,11 @@ fn main() {
 
     let learning_rate = 0.1;
 
-    let output = neural_network.forward(input.clone());
+    let output = neural_network.forward(&input);
     println!("Output before backpropagation: {:?}", output);
 
     neural_network.backward(input.clone(), target_output, learning_rate);
 
-    let output_after_backprop = neural_network.forward(input);
+    let output_after_backprop = neural_network.forward(&input);
     println!("Output after backpropagation: {:?}", output_after_backprop);
 }
