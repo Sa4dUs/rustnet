@@ -13,14 +13,16 @@ impl NeuralNetwork {
         }
     }
 
-    pub fn forward(&self, x: MatrixF32) -> MatrixF32 {
-        let mut out: MatrixF32 = x;
+    pub fn forward(&self, x: &MatrixF32) -> MatrixF32 {
+        let mut out: &MatrixF32 = x;
+        let mut aux: MatrixF32;
 
         for i in (0..self.layers.len()) {
-            out = self.layers[i].forward(out).1;
+            aux = self.layers[i].forward(out).1;
+            out = &aux;
         }
 
-        out
+        out.clone()
     }
 
     pub fn backward(&mut self, x: MatrixF32, y: MatrixF32, learning_rate: f32) {
@@ -29,7 +31,7 @@ impl NeuralNetwork {
         // Forward pass
         for i in 0..self.layers.len() {
             let input = out.last().unwrap().1.clone();
-            out.push(self.layers[i].forward(input));
+            out.push(self.layers[i].forward(&input));
         }
 
         // Backward pass + Gradient Descent

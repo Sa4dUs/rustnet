@@ -17,8 +17,8 @@ impl NeuralLayer {
         }
     }
 
-    pub fn forward(&self, x: MatrixF32) -> (MatrixF32, MatrixF32) {
-        let z = &(&self.w.clone().t()*&x) + &self.b.clone();
+    pub fn forward(&self, x: &MatrixF32) -> (MatrixF32, MatrixF32) {
+        let z = &(&self.w.clone().t()*x) + &self.b.clone();
         let a = z.apply(self.act_f.0);
         (z, a)
     }
