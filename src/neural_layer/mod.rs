@@ -26,7 +26,7 @@ impl NeuralLayer {
 
     pub fn backward(&mut self, delta: &MatrixF32, prev: &MatrixF32 ,learning_rate: f32) {
         // MATH DONE
-        self.w = &self.w - &(&MatrixF32::zeros_like(&self.w) * learning_rate);
-        self.b = &self.b - &(&MatrixF32::zeros_like(&self.b) * learning_rate);
+        self.w = &self.w - &(&(delta * &prev.t()) * learning_rate);
+        self.b = &self.b - &(&delta.mean_column() * learning_rate);
     }
 }
