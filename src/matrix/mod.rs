@@ -79,6 +79,21 @@ impl MatrixF32 {
         result
     }
 
+    pub fn mean_column(&self) -> Self {
+        let mut aux: Self = Self::new(self.get_rows(), 1);
+
+        for i in 0..self.get_rows() {
+            let mut sum = 0.0;
+            for j in 0..self.get_cols() {
+                sum += self.0[i][j];
+            }
+
+            aux.0[i][0] = sum/(self.get_cols() as f32);
+        }
+
+        aux
+    }
+
     pub fn apply(&self, f: Function) -> Self {
         let mut aux: Self = Self::new(self.get_rows(), self.get_cols());
 

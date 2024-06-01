@@ -10,7 +10,7 @@ mod math;
 mod neural_network;
 
 fn main() {
-    let mut neural_network = NeuralNetwork::new(&vec![(2, SIGMOID), (3, SIGMOID), (1, SIGMOID)]);
+    let mut neural_network = NeuralNetwork::new(&vec![(2, SIGMOID), (4, SIGMOID), (2, SIGMOID)]);
 
     let input = MatrixF32::from_vector(vec![
         vec![0.1],
