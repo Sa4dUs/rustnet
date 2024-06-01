@@ -16,10 +16,10 @@ fn main() {
     ]);
 
     let target_output = MatrixF32::from_vector(vec![
-        vec![1.0],
+        vec![0.0],
     ]);
 
-    let learning_rate = 0.5;
+    let learning_rate = 0.1;
 
     println!("Initial network state:");
     let initial_output = neural_network.forward(&input);
