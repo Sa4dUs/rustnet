@@ -21,12 +21,12 @@ impl MatrixF32 {
         MatrixF32::new(rows, cols)
     }
 
-    pub fn randomized(mut self) -> MatrixF32 {
+    pub fn randomized(mut self, scale: f32) -> MatrixF32 {
         let mut rng = rand::thread_rng();
 
         for i in 0..self.0.len() {
             for j in 0..self.0[i].len() {
-                self.0[i][j] = rng.gen::<f32>();
+                self.0[i][j] = rng.gen_range(-scale..scale);
             }
         }
 

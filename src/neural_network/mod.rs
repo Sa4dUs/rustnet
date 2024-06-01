@@ -1,4 +1,4 @@
-use crate::math::{ActivationFunction, ErrorFunction, SIGMOID};
+use crate::math::{ActivationFunction, ErrorFunction};
 use crate::matrix::MatrixF32;
 use crate::neural_layer::NeuralLayer;
 
@@ -17,7 +17,7 @@ impl NeuralNetwork {
         let mut out: &MatrixF32 = x;
         let mut aux: MatrixF32;
 
-        for i in (0..self.layers.len()) {
+        for i in 0..self.layers.len() {
             // MATH DONE
             aux = self.layers[i].forward(out).1;
             out = &aux;
@@ -34,25 +34,41 @@ impl NeuralNetwork {
             out.push(self.layers[i].forward(&input));
         }
 
-        let mut deltas = vec![];
-        let mut _w: MatrixF32 = MatrixF32::new(0, 0);
+        let _w: MatrixF32 = MatrixF32::new(0, 0);
 
-        for l in (0..self.layers.len()).rev() {
-            let (a, z) = out[l+1].clone();
-            let n = self.layers[l].w.get_rows();
+        for _ in (0..self.layers.len()).rev() {
+            // Step 1: Perform a forward pass and store activations
+            let mut activations = vec![x.clone()];
+            let mut zs = vec![];
 
-            let delta: MatrixF32;
-            if l == self.layers.len() - 1 {
-                delta = &(cost.1(a.clone(), y.clone())).elementwise_mul(a.apply(self.layers[l].act_f.1)) * (2.0f32/(n as f32));
-                deltas.insert(0, delta);
-            } else {
-                delta = &(&deltas[0] * &a.apply(self.layers[l].act_f.1).t()) * &self.layers[l+1].w.mean_column();
-                deltas.insert(0, delta);
+            let mut activation = x.clone();
+            for layer in &self.layers {
+                let (z, a) = layer.forward(&activation);
+                zs.push(z);
+                activations.push(a.clone());
+                activation = a;
             }
 
-            _w = self.layers[l].w.clone();
+            // Step 2: Calculate the output error
+            let mut delta = (cost.1)(activations.last().unwrap().clone(), y.clone())
+                .elementwise_mul(zs.last().unwrap().apply(self.layers.last().unwrap().act_f.1));
+            let mut deltas = vec![delta.clone()];
 
-            &self.layers[l].backward(&deltas[0], &out[l].1, learning_rate);
+            // Step 3: Backpropagate the error
+            for l in (1..self.layers.len()).rev() {
+                let z = &zs[l - 1];
+                let sp = z.apply(self.layers[l - 1].act_f.1);
+                delta = (&(&self.layers[l].w.t() * &delta)).elementwise_mul(sp);
+                deltas.insert(0, delta.clone());
+            }
+
+            // Step 4: Update the weights and biases
+            for l in 0..self.layers.len() {
+                let delta = &deltas[l];
+                let activation = &activations[l];
+                self.layers[l].w = &self.layers[l].w - &(&(delta * &activation.t()) * learning_rate);
+                self.layers[l].b = &self.layers[l].b - &(&delta.mean_column() * learning_rate);
+            }
         }
     }
 }

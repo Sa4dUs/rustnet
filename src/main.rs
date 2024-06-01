@@ -1,7 +1,5 @@
-use std::ptr::null;
 use crate::math::{MSE, SIGMOID};
 use crate::matrix::MatrixF32;
-use crate::neural_layer::NeuralLayer;
 use crate::neural_network::NeuralNetwork;
 
 mod matrix;
@@ -21,13 +19,21 @@ fn main() {
         vec![1.0],
     ]);
 
-    let learning_rate = 0.1;
+    let learning_rate = 0.5;
 
-    let output = neural_network.forward(&input);
-    println!("Output before backpropagation: {:?}", output);
+    println!("Initial network state:");
+    let initial_output = neural_network.forward(&input);
+    println!("Output before backpropagation: {:?}", initial_output);
 
-    neural_network.backward(input.clone(), target_output, MSE, learning_rate);
+    let epochs = 1000;
+    for epoch in 0..epochs {
+        neural_network.forward(&input);
+        neural_network.backward(input.clone(), target_output.clone(), MSE, learning_rate);
 
-    let output_after_backprop = neural_network.forward(&input);
-    println!("Output after backpropagation: {:?}", output_after_backprop);
+        let output = neural_network.forward(&input);
+        println!("Epoch {}: Output: {:?}", epoch, output);
+    }
+
+    let final_output = neural_network.forward(&input);
+    println!("Final output after training: {:?}", final_output);
 }
