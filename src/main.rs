@@ -1,4 +1,5 @@
-use crate::math::{MSE, SIGMOID};
+use rand::Rng;
+use crate::math::{MSE, RELU, SIGMOID};
 use crate::matrix::MatrixF32;
 use crate::neural_network::NeuralNetwork;
 
@@ -8,32 +9,43 @@ mod math;
 mod neural_network;
 
 fn main() {
-    let mut neural_network = NeuralNetwork::new(&vec![(2, SIGMOID), (4, SIGMOID), (1, SIGMOID)]);
+    let mut neural_network = NeuralNetwork::new(&vec![(2, SIGMOID), (1, RELU)]);
 
-    let input = MatrixF32::from_vector(vec![
-        vec![0.1],
-        vec![0.3],
-    ]);
 
-    let target_output = MatrixF32::from_vector(vec![
-        vec![0.0],
-    ]);
+    let mut x_train = vec![];
+    let mut y_train = vec![];
 
-    let learning_rate = 0.1;
+    let sample_size = 100;
 
-    println!("Initial network state:");
-    let initial_output = neural_network.forward(&input);
-    println!("Output before backpropagation: {:?}", initial_output);
+    for _ in 1..sample_size {
+        let mut rng = rand::thread_rng();
 
-    let epochs = 1000;
-    for epoch in 0..epochs {
-        neural_network.forward(&input);
-        neural_network.backward(input.clone(), target_output.clone(), MSE, learning_rate);
+        let a = rng.gen_range(0.0..1.0);
+        let b = rng.gen_range(0.0..1.0-a);
 
-        let output = neural_network.forward(&input);
-        println!("Epoch {}: Output: {:?}", epoch, output);
+        x_train.push(MatrixF32::from_vector(vec![
+            vec![a],
+            vec![b],
+        ]));
+
+        y_train.push(MatrixF32::from_vector(vec![
+            vec![a + b],
+        ]))
     }
 
-    let final_output = neural_network.forward(&input);
-    println!("Final output after training: {:?}", final_output);
+    let x_test = MatrixF32::from_vector(vec![
+        vec![10980.452214],
+        vec![79091.51290],
+    ]);
+
+    let learning_rate = 0.5;
+
+    println!("Initial network state:");
+    let initial_output = neural_network.forward(&x_test);
+    println!("Output before training: {:?}", initial_output);
+
+    neural_network.train(x_train, y_train, MSE, learning_rate);
+
+    let final_output = neural_network.forward(&x_test);
+    println!("Output after training: {:?}", final_output)
 }
