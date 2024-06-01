@@ -7,7 +7,6 @@ pub struct MatrixF32(Vec<Vec<f32>>);
 
 impl MatrixF32 {
     pub fn new(rows: usize, cols: usize) -> MatrixF32 {
-        println!("{:?}", vec![vec![0.0; cols];rows]);
         MatrixF32(vec![vec![0.0; cols];rows])
     }
 
@@ -148,7 +147,7 @@ impl ops::Sub for &MatrixF32 {
 
         for i in 0..lhs_rows {
             for j in 0..lhs_cols {
-                result.0[i][j] -= self.0[i][j] + rhs.0[i][j];
+                result.0[i][j] = self.0[i][j] - rhs.0[i][j];
             }
         }
 

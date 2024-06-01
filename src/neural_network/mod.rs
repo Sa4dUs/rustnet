@@ -29,7 +29,7 @@ impl NeuralNetwork {
     pub fn backward(&mut self, x: MatrixF32, y: MatrixF32, cost: ErrorFunction, learning_rate: f32) {
         let mut out = vec![(MatrixF32::new(0, 0), x.clone())];
 
-        // Forward pass MATH DONE
+        // Forward pass
         for i in 0..self.layers.len() {
             let input = out.last().unwrap().1.clone();
             out.push(self.layers[i].forward(&input));
@@ -43,19 +43,15 @@ impl NeuralNetwork {
             let (a, z) = out[l+1].clone();
 
             if l == self.layers.len() - 1 {
-                // MATH DONE
-                let dcda = &(cost.1(a.clone(), y.clone())); // nx1
-                let dadz = a.apply(self.layers[l].act_f.1);  // nx1
-
-                deltas.insert(0, dcda.elementwise_mul(dadz));   // nx1
+                deltas.insert(0, MatrixF32::new(self.layers[l].w.get_rows(), 1));
             } else {
                 // Pending delta when l != L
-                deltas.insert(0, (&(&deltas[0] * &_w) * &a.apply(self.layers[l].act_f.1)));
+                deltas.insert(0, MatrixF32::new(self.layers[l].w.get_rows(), 1));
             }
 
             _w = self.layers[l].w.clone();
 
-            &self.layers[l].backward(&deltas[0], &out[l-1].1, learning_rate);
+            &self.layers[l].backward(&deltas[0], &out[l].1, learning_rate);
         }
     }
 }
