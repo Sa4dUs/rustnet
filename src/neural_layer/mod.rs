@@ -1,6 +1,5 @@
-use std::ops::Mul;
 use crate::matrix::MatrixF32;
-use crate::math::{ActivationFunction, SIGMOID};
+use crate::math::{ActivationFunction};
 
 pub struct NeuralLayer {
     pub(crate) w: MatrixF32,

@@ -18,7 +18,6 @@ impl NeuralNetwork {
         let mut aux: MatrixF32;
 
         for i in 0..self.layers.len() {
-            // MATH DONE
             aux = self.layers[i].forward(out).1;
             out = &aux;
         }
