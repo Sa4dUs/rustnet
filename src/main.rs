@@ -31,7 +31,7 @@ fn main() {
 
     let learning_rate = 0.03;
 
-    neural_network.train(x_train.clone(), y_train.clone(), MSE, learning_rate);
+    neural_network.train(x_train.clone(), y_train.clone(), MSE, learning_rate, 10);
 
     neural_network.test(x_test, y_test, MSE, 0.1);
 }

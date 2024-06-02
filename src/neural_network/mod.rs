@@ -65,12 +65,14 @@ impl NeuralNetwork {
         }
     }
 
-    pub fn train(&mut self, x: Vec<MatrixF32>, y: Vec<MatrixF32>, cost_f: ErrorFunction, learning_rate: f32) {
+    pub fn train(&mut self, x: Vec<MatrixF32>, y: Vec<MatrixF32>, cost_f: ErrorFunction, learning_rate: f32, epochs: usize) {
         assert_eq!(x.len(), y.len(), "Input and Output need to have the same len");
 
-        for it in x.iter().zip(y.iter()) {
-            let (xi, yi) = it;
-            self.backward(xi.to_owned(), yi.to_owned(), cost_f, learning_rate);
+        for _ in 1..epochs {
+            for it in x.iter().zip(y.iter()) {
+                let (xi, yi) = it;
+                self.backward(xi.to_owned(), yi.to_owned(), cost_f, learning_rate);
+            }
         }
     }
 
