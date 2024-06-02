@@ -14,7 +14,7 @@ fn main() {
     let inputs = 0..20;
     let outputs = 20..21;
 
-    let mut neural_network = NeuralNetwork::new(&vec![(inputs.len(), SIGMOID), (8, SIGMOID), (4, SIGMOID),(outputs.len(), SIGMOID)]);
+    let mut neural_network = NeuralNetwork::new(&vec![(inputs.len(), SIGMOID) ,(outputs.len(), SIGMOID)]);
 
     let csv_out = read_csv_to_neural_input("phone_price_train.csv", &inputs, &outputs).expect("csv reading failed");
 

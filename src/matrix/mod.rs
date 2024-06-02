@@ -57,8 +57,10 @@ impl MatrixF32 {
     pub fn elementwise_mul(&self, other: &MatrixF32) -> MatrixF32 {
         let rows = self.get_rows();
         let cols = self.get_cols();
+
         assert_eq!(rows, other.get_rows(), "Matrix dimensions are not compatible for element-wise multiplication.");
         assert_eq!(cols, other.get_cols(), "Matrix dimensions are not compatible for element-wise multiplication.");
+
         let mut result = MatrixF32::new(rows, cols);
         for i in 0..rows {
             for j in 0..cols {
@@ -98,8 +100,10 @@ impl ops::Add for &MatrixF32 {
     fn add(self, rhs: &MatrixF32) -> Self::Output {
         let rows = self.get_rows();
         let cols = self.get_cols();
+
         assert_eq!(rows, rhs.get_rows(), "Matrix dimensions are not compatible for addition.");
         assert_eq!(cols, rhs.get_cols(), "Matrix dimensions are not compatible for addition.");
+
         let mut result = MatrixF32::new(rows, cols);
         for i in 0..rows {
             for j in 0..cols {
@@ -116,8 +120,10 @@ impl ops::Sub for &MatrixF32 {
     fn sub(self, rhs: &MatrixF32) -> Self::Output {
         let rows = self.get_rows();
         let cols = self.get_cols();
+
         assert_eq!(rows, rhs.get_rows(), "Matrix dimensions are not compatible for subtraction.");
         assert_eq!(cols, rhs.get_cols(), "Matrix dimensions are not compatible for subtraction.");
+
         let mut result = MatrixF32::new(rows, cols);
         for i in 0..rows {
             for j in 0..cols {
@@ -135,7 +141,9 @@ impl ops::Mul<&MatrixF32> for &MatrixF32 {
         let rows = self.get_rows();
         let cols = rhs.get_cols();
         let common_dim = self.get_cols();
+
         assert_eq!(common_dim, rhs.get_rows(), "Matrix dimensions are not compatible for multiplication.");
+
         let mut result = MatrixF32::new(rows, cols);
         for i in 0..rows {
             for j in 0..cols {
