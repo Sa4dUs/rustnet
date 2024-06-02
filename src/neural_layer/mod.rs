@@ -10,8 +10,8 @@ pub struct NeuralLayer {
 impl NeuralLayer {
     pub fn new(n_connections: usize, n_neurons: usize, act_f: ActivationFunction) -> NeuralLayer {
         NeuralLayer {
-            w: MatrixF32::new(n_neurons, n_connections).randomized(5.0),
-            b  : MatrixF32::new(n_neurons, 1).randomized(5.0),
+            w: MatrixF32::new(n_neurons, n_connections).randomized(1.0),
+            b  : MatrixF32::new(n_neurons, 1).randomized(1.0),
             act_f
         }
     }
