@@ -1,10 +1,11 @@
 use std::env;
 use std::error::Error;
 use std::fs::File;
+use std::ops::Range;
 use csv::ReaderBuilder;
 use crate::matrix::MatrixF32;
 
-pub fn read_csv_to_neural_input(file_path: &str, data_indexes: Vec<i32>, result_indexes: Vec<i32>) -> Result<Vec<Vec<MatrixF32>>, Box<dyn Error>> {
+pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<i32>, result_indexes: &Range<i32>) -> Result<Vec<Vec<MatrixF32>>, Box<dyn Error>> {
     //Path relativo
     let mut path = env::current_dir().expect("Failed to get current directory");
     // Agregar la ruta relativa al archivo CSV
