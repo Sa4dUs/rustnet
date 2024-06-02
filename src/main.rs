@@ -17,7 +17,7 @@ fn main() {
     let mut neural_network = NeuralNetwork::new(&vec![(inputs.len(), SIGMOID), (6, SIGMOID), (6, SIGMOID),(outputs.len(), SIGMOID)]);
 
 
-    let csv_out = read_csv_to_neural_input("C:/Users/jorge/Rust/neural-network/mushroom_cleaned.csv", inputs, outputs).expect("TODO: panic message");
+    let csv_out = read_csv_to_neural_input("mushroom_cleaned.csv", inputs, outputs).expect("csv reading failed");
 
     let mut x_train = vec![];
     let mut y_train = vec![];
