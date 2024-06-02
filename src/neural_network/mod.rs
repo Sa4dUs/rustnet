@@ -62,7 +62,7 @@ impl NeuralNetwork {
             let delta = &deltas[l];
             let activation = &activations[l];
             self.layers[l].w = &self.layers[l].w - &(&(delta * &activation.t()) * learning_rate);
-            self.layers[l].b = &self.layers[l].b - &(&delta.mean_column() * learning_rate);
+            self.layers[l].b = &self.layers[l].b - &(delta * learning_rate);
         }
     }
 
@@ -73,5 +73,25 @@ impl NeuralNetwork {
             let (xi, yi) = it;
             self.backward(xi.to_owned(), yi.to_owned(), cost_f, learning_rate);
         }
+    }
+
+    pub fn test(&self, x: Vec<MatrixF32>, y: Vec<MatrixF32>, cost_f: ErrorFunction, threshold: f32) {
+        let n = x.len();
+        let mut hits = 0;
+
+        for it in x.iter().zip(y.iter()) {
+            let (input, expected) = it;
+            let actual = self.forward(input);
+
+            println!("Actual: {:?} VS Expected: {:?}", actual.clone(), expected.to_owned());
+
+            let error = cost_f.0(actual, expected.to_owned());
+
+            if error < threshold {
+                hits += 1;
+            }
+        }
+
+        println!("Testing for {} samples.\nHits: {}\nFails: {}\nHit ratio: {}", n, hits, n - hits, (hits as f32)/(n as f32));
     }
 }

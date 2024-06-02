@@ -21,20 +21,15 @@ fn main() {
     let mut x_train = vec![];
     let mut y_train = vec![];
 
-    let x_test = 1035;
-
     x_train = csv_out[0].clone();
     y_train = csv_out[1].clone();
 
-    let learning_rate = 0.03;
+    let mut x_test = x_train.clone();
+    let mut y_test = y_train.clone();
 
-    println!("Initial network state:");
-    let initial_output = neural_network.forward(&x_train[x_test]);
-    println!("Output before training: {:?}", initial_output);
+    let learning_rate = 0.03;
 
     neural_network.train(x_train.clone(), y_train.clone(), MSE, learning_rate);
 
-    let final_output = neural_network.forward(&x_train[x_test]);
-    println!("Output after training: {:?}", final_output);
-    println!("Expected output: {:?}", &y_train[x_test]);
+    neural_network.test(x_test, y_test, MSE, 0.1);
 }
