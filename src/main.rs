@@ -14,49 +14,27 @@ fn main() {
     let inputs = vec![0,1,2,3,4,5,6,7];
     let outputs = vec![8];
 
-    let mut neural_network = NeuralNetwork::new(&vec![(inputs.len(), SIGMOID), (6, SIGMOID), (6, SIGMOID),(outputs.len(), SIGMOID)]);
-
+    let mut neural_network = NeuralNetwork::new(&vec![(inputs.len(), SIGMOID), (8, SIGMOID), (4, SIGMOID),(outputs.len(), SIGMOID)]);
 
     let csv_out = read_csv_to_neural_input("mushroom_cleaned.csv", inputs, outputs).expect("csv reading failed");
 
     let mut x_train = vec![];
     let mut y_train = vec![];
 
+    let x_test = 1035;
+
     x_train = csv_out[0].clone();
     y_train = csv_out[1].clone();
-    /*
-    let sample_size = 100;
 
-    for _ in 1..sample_size {
-        let mut rng = rand::thread_rng();
-
-        let a = rng.gen_range(0.0..1.0);
-        let b = rng.gen_range(0.0..1.0-a);
-
-        x_train.push(MatrixF32::from_vector(vec![
-            vec![a],
-            vec![b],
-        ]));
-
-        y_train.push(MatrixF32::from_vector(vec![
-            vec![a + b],
-        ]))
-    }
-
-    let x_test = MatrixF32::from_vector(vec![
-        vec![10980.452214],
-        vec![79091.51290],
-    ]);
-    */
-    let learning_rate = 0.5;
+    let learning_rate = 0.03;
 
     println!("Initial network state:");
-    let initial_output = neural_network.forward(&x_train[1035]);
+    let initial_output = neural_network.forward(&x_train[x_test]);
     println!("Output before training: {:?}", initial_output);
 
     neural_network.train(x_train.clone(), y_train.clone(), MSE, learning_rate);
 
-    let final_output = neural_network.forward(&x_train[1035]);
+    let final_output = neural_network.forward(&x_train[x_test]);
     println!("Output after training: {:?}", final_output);
-    println!("Expected output: {:?}", &y_train[1035]);
+    println!("Expected output: {:?}", &y_train[x_test]);
 }

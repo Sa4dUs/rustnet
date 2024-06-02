@@ -50,7 +50,7 @@ impl NeuralNetwork {
         for l in (1..self.layers.len()).rev() {
             let z = &zs[l - 1];
             let a = z.apply(self.layers[l - 1].act_f.1);
-            delta = (&self.layers[l].w.t() * &delta); // TODO May review
+            delta = (&self.layers[l].w.t() * &deltas[0]).elementwise_mul(&a); // TODO May review
             deltas.insert(0, delta.clone());
         }
 
