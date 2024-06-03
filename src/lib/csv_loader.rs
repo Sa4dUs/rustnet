@@ -67,6 +67,7 @@ pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, re
 }
 
 fn normalize(_size: usize, vector: &Vec<f64>) -> Vec<f64> {
+    return vector.clone();
     let length = vector.iter().map(|x| x * x).sum::<f64>().sqrt();
     vector.iter().map(|&x| x / length).collect()
 }
