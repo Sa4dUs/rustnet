@@ -1,37 +1,40 @@
-use rand::Rng;
-use crate::csv_loader::read_csv_to_neural_input;
-use crate::math::{MSE, RELU, SIGMOID};
-use crate::matrix::MatrixF32;
-use crate::neural_network::NeuralNetwork;
+use std::collections::VecDeque;
+use ndarray::{Array1, Array2};
+use neural_network::lib::csv_loader::read_csv_to_neural_input;
 
-mod matrix;
-mod neural_layer;
-mod math;
-mod neural_network;
-mod csv_loader;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
+use neural_network::lib::math::{MSE, probability_density_function, RELU};
+use neural_network::neural::network::NeuralNetwork;
 
 fn main() {
-    let inputs = 0..20;
-    let outputs = 20..21;
+    let inputs = 0..3;
+    let outputs = 3..4;
 
-    let mut neural_network = NeuralNetwork::new(&vec![(inputs.len(), RELU), (4, RELU), (outputs.len(), RELU)]);
+    let csv_out = read_csv_to_neural_input("train.csv", &inputs, &outputs).expect("csv reading failed");
+    let x_train = csv_out[0].clone();
+    let y_train = csv_out[1].clone();
 
-    let csv_out = read_csv_to_neural_input("phone_price_train.csv", &inputs, &outputs).expect("csv reading failed");
+    let csv_out = read_csv_to_neural_input("test.csv", &inputs, &outputs).expect("csv reading failed");
+    let x_test: Vec<Array2<f64>> = csv_out[0].clone();
+    let y_test: Vec<Array2<f64>> = csv_out[1].clone();
 
-    let mut x_train = vec![];
-    let mut y_train = vec![];
+    let mut rng = StdRng::seed_from_u64(1);
 
-    x_train = csv_out[0].clone();
-    y_train = csv_out[1].clone();
+    let mut nn = NeuralNetwork::new(inputs.len(), vec![(4, RELU), (1, RELU)], &mut rng);
 
-    let csv_out = read_csv_to_neural_input("phone_price_train.csv", &inputs, &outputs).expect("csv reading failed");
-
-    let mut x_test = csv_out[0].clone();;
-    let mut y_test = csv_out[1].clone();;
-
+    let loss_f = MSE;
     let learning_rate = 0.05;
 
-    neural_network.train(x_train.clone(), y_train.clone(), MSE, learning_rate, 100);
+    let x: Array2<f64> = x_train[0].clone();
+    let y = nn.forward(&x);
+    println!("BEFORE {}", y);
 
-    neural_network.test(x_test, y_test, MSE, 0.3);
+    for i in 1..1000 {
+        nn.train(&x_train, &y_train, learning_rate, loss_f);
+    }
+
+    let y = nn.forward(&x);
+    println!("AFTER {}", y);
 }

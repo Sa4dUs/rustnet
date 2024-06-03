@@ -1,6 +1,6 @@
 use std::ops;
 use rand::Rng;
-use crate::math::Function;
+use crate::lib::math::Function;
 
 #[derive(Clone, Debug)]
 pub struct MatrixF32(Vec<Vec<f32>>);
