@@ -40,18 +40,22 @@ impl NeuralNetwork {
 
         // Step 2: Calculate the output error
         let dc_da = (cost_f.1)(activations.last().unwrap().clone(), y);
-        let da_dz = &activations.last().unwrap().apply(self.layers.last().unwrap().act_f.1);
+        //let da_dz = &activations.last().unwrap().apply(self.layers.last().unwrap().act_f.1);
+        let da_dz = zs.last().unwrap().apply(self.layers.last().unwrap().act_f.1);
 
-        let mut delta = dc_da.elementwise_mul(da_dz);
+        let mut delta = dc_da.elementwise_mul(&da_dz);
         let mut deltas = vec![delta.clone()];
 
         // Step 3: Backpropagate the error
         for l in (1..self.layers.len()).rev() {
             let z = &zs[l - 1];
-            let a = z.apply(self.layers[l - 1].act_f.1);
+
+            // let a = z.apply(self.layers[l - 1].act_f.1);
+            let da_dz = z.apply(self.layers[l - 1].act_f.1);
 
             let delta_l = &deltas[0];
-            delta = (&self.layers[l].w.t() * delta_l).elementwise_mul(&a); // TODO May review
+            // delta = (&self.layers[l].w.t() * delta_l).elementwise_mul(&a); // TODO May review
+            delta = (&self.layers[l].w.t() * delta_l).elementwise_mul(&da_dz);
 
             deltas.insert(0, delta.clone());
         }
@@ -68,7 +72,7 @@ impl NeuralNetwork {
     pub fn train(&mut self, x: Vec<MatrixF32>, y: Vec<MatrixF32>, cost_f: ErrorFunction, learning_rate: f32, epochs: usize) {
         assert_eq!(x.len(), y.len(), "Input and Output need to have the same len");
 
-        for _ in 1..epochs {
+        for _ in 1..=epochs {
             for it in x.iter().zip(y.iter()) {
                 let (xi, yi) = it;
                 self.backward(xi.to_owned(), yi.to_owned(), cost_f, learning_rate);
