@@ -40,7 +40,7 @@ impl NeuralLayer for LinearLayer {
     }
 
     fn get_output(&self, x: &Array2<f64>) -> Array2<f64> {
-        (self.W.dot(&x.t()) + self.b.clone()).t().to_owned().mapv(self.act_f.0)
+        self.act_f.0((self.W.dot(&x.t()) + self.b.clone()).t().to_owned())
     }
 
     fn stochastic_gradient_descent(&mut self, learning_rate: f64) {

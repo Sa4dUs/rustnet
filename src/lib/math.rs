@@ -3,13 +3,13 @@ use ndarray::Array2;
 use ndarray_rand::rand_distr::num_traits::Pow;
 use ndarray_rand::rand_distr::num_traits::real::Real;
 
-pub type Function = fn(f64) -> f64;
+pub type Function = fn(Array2<f64>) -> Array2<f64>;
 pub type ActivationFunction = (Function, Function);
 pub type ErrorFunction = (fn(Array2<f64>, Array2<f64>) -> f64, fn(Array2<f64>, Array2<f64>) -> Array2<f64>);
-pub const NULL: ActivationFunction = (|t| t, |t| 1.0);
-pub const SIGMOID: ActivationFunction = (|t| 1.0/(1.0+(-t).exp()), |t| ((-t).exp())/(1.0 + (-t).exp()).pow(2));
-pub const TANH: ActivationFunction = (|t| (t.exp() - (-t).exp())/(t.exp() + (-t).exp()), |t| 1.0 - TANH.0(t).powi(2));
-pub const RELU: ActivationFunction = (|t| f64::max(0.0, t), |t| return if t < 0.0 { 0.0 } else { 1.0 });
+pub const NULL: ActivationFunction = (|t| t, |t| t.mapv(|_| 1.0));
+pub const SIGMOID: ActivationFunction = (|t| 1.0/(1.0+t.mapv(|e| (-e).exp())), |t| (t.mapv(|e| (-e).exp()))/(1.0 + t.mapv(|e| (-e).exp())).mapv(|e| e.powi(2)));
+pub const TANH: ActivationFunction = (|t| (t.mapv(|e| (e).exp()) - t.mapv(|e| (-e).exp()))/(t.mapv(|e| (e).exp()) + t.mapv(|e| (-e).exp())), |t| 1.0 - TANH.0(t).mapv(|e| (e).powi(2)));
+pub const RELU: ActivationFunction = (|t| t.mapv(|e| f64::max(0.0, e)), |t| t.mapv(|e| return if e < 0.0 { 0.0 } else { 1.0 }));
 
 pub const MSE: ErrorFunction = (|x, y| (x - y).mapv(|x| x * x).mean().expect("MSE Error"), |x, y| 2.0 * (x.clone() - y) / x.len() as f64);
 pub const CROSS_ENTROPY: ErrorFunction = (|x, y| (-1.0/x.len() as f64)*(x.iter().zip(y).map(|(xi, yi)| yi*(xi.ln())+(1.0-yi)*((1.0-xi).ln())).sum::<f64>()), |x, y| y.clone()/x.clone() + (1.0-y)/(1.0-x));
