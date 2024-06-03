@@ -6,7 +6,7 @@ use neural_network::lib::csv_loader::read_csv_to_neural_input;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use neural_network::lib::math::{MSE, probability_density_function, RELU, SIGMOID};
+use neural_network::lib::math::{CROSS_ENTROPY, MSE, probability_density_function, RELU, SIGMOID};
 use neural_network::neural::network::NeuralNetwork;
 
 fn main() {
@@ -25,7 +25,7 @@ fn main() {
 
     let mut nn = NeuralNetwork::new(inputs.len(), vec![(6, SIGMOID), (4, SIGMOID), (outputs.len(), SIGMOID)], &mut rng);
 
-    let loss_f = MSE;
+    let loss_f = CROSS_ENTROPY;
     let learning_rate = 0.03;
     let epochs = 10;
     let threshold = 0.05;
