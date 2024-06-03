@@ -26,15 +26,9 @@ fn main() {
 
     let loss_f = MSE;
     let learning_rate = 0.05;
+    let epochs = 1000;
+    let threshold = 0.05;
 
-    let x: Array2<f64> = x_train[0].clone();
-    let y = nn.forward(&x);
-    println!("BEFORE {}", y);
-
-    for i in 1..1000 {
-        nn.train(&x_train, &y_train, learning_rate, loss_f);
-    }
-
-    let y = nn.forward(&x);
-    println!("AFTER {}", y);
+    nn.train(&x_train, &y_train, learning_rate, loss_f, epochs);
+    nn.test(&x_test, &y_test, loss_f, threshold);
 }

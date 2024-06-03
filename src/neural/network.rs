@@ -48,19 +48,39 @@ impl NeuralNetwork {
         dy
     }
 
-    pub fn train(&mut self, x: &Vec<Array2<f64>>, y: &Vec<Array2<f64>>, learning_rate: f64, loss_f: ErrorFunction) {
+    pub fn train(&mut self, x: &Vec<Array2<f64>>, y: &Vec<Array2<f64>>, learning_rate: f64, loss_f: ErrorFunction, epochs: usize) {
+        for _ in 1..epochs {
+            for it in x.iter().zip(y) {
+                let (input, expected) = it;
+                let actual = self.forward(&input);
+
+                let loss = loss_f.0(actual.to_owned(), expected.clone());
+                let dL_dy = loss_f.1(actual.to_owned(), expected.clone());
+
+                self.backward(&dL_dy);
+
+                for layer in self.layers.iter_mut() {
+                    layer.stochastic_gradient_descent(learning_rate);
+                }
+            }
+        }
+    }
+
+    pub fn test(&mut self, x: &Vec<Array2<f64>>, y: &Vec<Array2<f64>>, loss_f: ErrorFunction, threshold: f64) {
+        let size = x.len();
+        let mut hits = 0;
+
         for it in x.iter().zip(y) {
             let (input, expected) = it;
             let actual = self.get_output(&input);
 
             let loss = loss_f.0(actual.to_owned(), expected.clone());
-            let dL_dy = loss_f.1(actual.to_owned(), expected.clone());
 
-            self.backward(&dL_dy);
-
-            for layer in self.layers.iter_mut() {
-                layer.stochastic_gradient_descent(learning_rate);
+            if loss < threshold {
+                hits += 1;
             }
         }
+
+        println!("Testing for {} samples.\nHits: {}\nFails: {}\nHit ratio: {}", size, hits, size - hits, (hits as f32)/(size as f32));
     }
 }
