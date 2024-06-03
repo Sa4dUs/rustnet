@@ -12,8 +12,8 @@ use neural_network::neural::network::NeuralNetwork;
 fn main() {
     let inputs = 0..8;
     let outputs = 8..9;
-    let output_values: usize = 0;
-    let is_classification: bool = false;
+    let output_values: usize = 2;
+    let is_classification: bool = true;
     let training_file_path: &str = "mushroom_cleaned.csv";
     let test_file_path: &str = "mushroom_cleaned.csv";
 
@@ -27,7 +27,7 @@ fn main() {
 
     let mut rng = StdRng::seed_from_u64(1);
 
-    let mut nn = NeuralNetwork::new(inputs.len(), vec![(6, SIGMOID), (4, SIGMOID), (outputs.len(), SIGMOID)], &mut rng);
+    let mut nn = NeuralNetwork::new(inputs.len(), vec![(6, SIGMOID), (4, SIGMOID), (output_values, SIGMOID)], &mut rng);
 
     let loss_f = CROSS_ENTROPY;
     let learning_rate = 0.03;
