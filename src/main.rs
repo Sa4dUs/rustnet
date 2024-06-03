@@ -12,12 +12,16 @@ use neural_network::neural::network::NeuralNetwork;
 fn main() {
     let inputs = 0..8;
     let outputs = 8..9;
+    let output_values: usize = 0;
+    let is_classification: bool = false;
+    let training_file_path: &str = "mushroom_cleaned.csv";
+    let test_file_path: &str = "mushroom_cleaned.csv";
 
-    let csv_out = read_csv_to_neural_input("mushroom_cleaned.csv", &inputs, &outputs, false, 0).expect("csv reading failed");
+    let csv_out = read_csv_to_neural_input(training_file_path, &inputs, &outputs, is_classification, output_values).expect("csv reading failed");
     let x_train = csv_out[0].clone();
     let y_train = csv_out[1].clone();
 
-    let csv_out = read_csv_to_neural_input("mushroom_cleaned.csv", &inputs, &outputs, false, 0).expect("csv reading failed");
+    let csv_out = read_csv_to_neural_input(test_file_path, &inputs, &outputs, is_classification, output_values).expect("csv reading failed");
     let x_test: Vec<Array2<f64>> = csv_out[0].clone();
     let y_test: Vec<Array2<f64>> = csv_out[1].clone();
 
