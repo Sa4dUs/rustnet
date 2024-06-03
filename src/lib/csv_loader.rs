@@ -3,71 +3,91 @@ use std::error::Error;
 use std::fs::File;
 use std::ops::Range;
 use csv::ReaderBuilder;
-use ndarray::Array2;
+use ndarray::{Array, Array2, Axis};
 
-pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, result_indexes: &Range<usize>) -> Result<Vec<Vec<Array2<f64>>>, Box<dyn Error>> {
+pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, result_indexes: &Range<usize>, is_classification: bool, classification_values: usize) -> Result<Vec<Vec<Array2<f64>>>, Box<dyn Error>> {
+    //Setup file path
     let mut path = env::current_dir().expect("Failed to get current directory");
     path = path.join("data").join(file_path);
 
+    //Initiate file reader
     let file = File::open(path)?;
     let mut rdr = ReaderBuilder::new().from_reader(file);
 
+    //Ready vector outputs
     let mut headers: Vec<String> = Vec::new();
-    let mut values: Vec<Array2<f64>> = Vec::new();
-    let mut results: Vec<Array2<f64>> = Vec::new();
+    let mut inputs: Vec<Array2<f64>> = Vec::new();
+    let mut outputs: Vec<Array2<f64>> = Vec::new();
 
-    if let Some(result) = rdr.headers().ok() {
+    if let Some(result) = rdr.headers().ok()
+    {
         headers = result.iter().map(|s| s.to_string()).collect();
     }
 
-    let mut numeric_values_set: Vec<Vec<f64>> = Vec::new();
-    for result in rdr.records() {
-        let mut numeric_values_data: Vec<f64> = Vec::new();
-        let mut numeric_values_results: Vec<f64> = Vec::new();
+    let input_size = data_indexes.len();
+    let output_size = result_indexes.len();
+
+    //Iterate though csv rows
+    for result in rdr.records()
+    {
+
         let record = result?;
 
+        let mut inputs_temp = vec![0.0; input_size];
+        let mut outputs_temp: Vec<f64>;
+        if is_classification
+        {
+            outputs_temp = vec![0.0; classification_values];
+        }
+        else
+        {
+            outputs_temp = vec![0.0; output_size];
+        }
+
+        //Iterate through columns in row
+        let mut j = 0;
         for (i, value) in record.iter().enumerate() {
-            if let Ok(num) = value.parse::<f64>() {
-                if data_indexes.contains(&i) {
-                    numeric_values_data.push(num);
-                } else if result_indexes.contains(&i) {
-                    numeric_values_results.push(num);
+            if let Ok(num) = value.parse::<f64>()
+            {
+                if data_indexes.contains(&i)
+                {
+                    //Push inputs to temp
+                    inputs_temp[i - j] = num;
+                } else if result_indexes.contains(&i)
+                {
+                    if is_classification
+                    {
+                        //Parse from f64 to usize
+                        let mut out_index: usize = 0;
+                        if num >= 0.0 && num.is_finite()
+                        {
+                            out_index = num.round() as usize;
+                        }
+
+                        // Push outputs to temp
+                        outputs_temp[out_index] = 1.0;
+                        j += 1;
+                    }
+                    else
+                    {
+                        //Push outputs to temp
+                        outputs_temp[j] = num;
+                        j += 1;
+                    }
+
                 }
             }
         }
 
-        for (k, &value) in numeric_values_data.iter().enumerate() {
-            if k < numeric_values_set.len() {
-                numeric_values_set[k].push(value);
-            } else {
-                numeric_values_set.push(vec![value]);
-            }
-        }
+        // From Vec to Array2
+        let input_array = Array2::from_shape_vec((1, input_size), inputs_temp)?;
+        let output_array = Array2::from_shape_vec((1, output_size), outputs_temp)?;
 
-        let result_array = Array2::from_shape_vec((numeric_values_results.len(), 1), numeric_values_results)?;
-        results.push(result_array.reversed_axes());
+        //Push colum matrix to function outputs
+        inputs.push(input_array);
+        outputs.push(output_array);
+
     }
 
-    let mut numeric_values_normalized: Vec<Vec<f64>> = Vec::new();
-    for row in numeric_values_set.iter().enumerate() {
-        numeric_values_normalized.push(normalize(row.0, row.1));
-    }
-
-    for i in 0..numeric_values_normalized[0].len() {
-        let mut row_values: Vec<f64> = Vec::new();
-        for j in 0..numeric_values_normalized.len() {
-            row_values.push(numeric_values_normalized[j][i])
-        }
-
-        let values_array = Array2::from_shape_vec((row_values.len(), 1), row_values)?;
-        values.push(values_array.reversed_axes());
-    }
-
-    Ok(vec![values, results])
-}
-
-fn normalize(_size: usize, vector: &Vec<f64>) -> Vec<f64> {
-    return vector.clone();
-    let length = vector.iter().map(|x| x * x).sum::<f64>().sqrt();
-    vector.iter().map(|&x| x / length).collect()
+    Ok(vec![inputs, outputs])
 }
