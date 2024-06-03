@@ -25,7 +25,7 @@ pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, re
     }
 
     let input_size = data_indexes.len();
-    let output_size = result_indexes.len();
+    let output_size = classification_values;
 
     //Iterate though csv rows
     for result in rdr.records()
@@ -34,15 +34,7 @@ pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, re
         let record = result?;
 
         let mut inputs_temp = vec![0.0; input_size];
-        let mut outputs_temp: Vec<f64>;
-        if is_classification
-        {
-            outputs_temp = vec![0.0; classification_values];
-        }
-        else
-        {
-            outputs_temp = vec![0.0; output_size];
-        }
+        let mut outputs_temp: Vec<f64> = vec![0.0; output_size];
 
         //Iterate through columns in row
         let mut j = 0;
@@ -66,15 +58,13 @@ pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, re
 
                         // Push outputs to temp
                         outputs_temp[out_index] = 1.0;
-                        j += 1;
                     }
                     else
                     {
                         //Push outputs to temp
                         outputs_temp[j] = num;
-                        j += 1;
                     }
-
+                    j += 1;
                 }
             }
         }
