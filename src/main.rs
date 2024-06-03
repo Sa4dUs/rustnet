@@ -13,11 +13,11 @@ fn main() {
     let inputs = 0..8;
     let outputs = 8..9;
 
-    let csv_out = read_csv_to_neural_input("mushroom_cleaned.csv", &inputs, &outputs).expect("csv reading failed");
+    let csv_out = read_csv_to_neural_input("mushroom_cleaned.csv", &inputs, &outputs, false, 0).expect("csv reading failed");
     let x_train = csv_out[0].clone();
     let y_train = csv_out[1].clone();
 
-    let csv_out = read_csv_to_neural_input("mushroom_cleaned.csv", &inputs, &outputs).expect("csv reading failed");
+    let csv_out = read_csv_to_neural_input("mushroom_cleaned.csv", &inputs, &outputs, false, 0).expect("csv reading failed");
     let x_test: Vec<Array2<f64>> = csv_out[0].clone();
     let y_test: Vec<Array2<f64>> = csv_out[1].clone();
 
