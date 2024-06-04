@@ -13,12 +13,12 @@ use neural_network::lib::network_parser::{load_from, save_to};
 use neural_network::neural::network::NeuralNetwork;
 
 fn main() {
-    let inputs = 0..2;
-    let outputs = 2..3;
-    let output_values: usize = 2;
+    let inputs = 0..20;
+    let outputs = 20..21;
+    let output_values: usize = 4;
     let is_classification: bool = true;
-    let training_file_path: &str = "train.csv";
-    let test_file_path: &str = "test.csv";
+    let training_file_path: &str = "train_phone.csv";
+    let test_file_path: &str = "train_phone.csv";
 
     let csv_out = read_csv_to_neural_input(training_file_path, &inputs, &outputs, is_classification, output_values).expect("csv reading failed");
     let x_train = csv_out[0].clone();

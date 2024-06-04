@@ -141,7 +141,7 @@ fn mse_derivative(x: Array2<f64>, y: Array2<f64>) -> Array2<f64> {
 
 fn softmax_cross_entropy(x: Array2<f64>, y: Array2<f64>) -> f64
 {
-    let log_likelihood = y * &x.mapv(|t| f64::max(t.ln(), f64::min_value()));
+    let log_likelihood = y * &x.mapv(|t| f64::max(t.ln(), -10.0));
     -log_likelihood.sum() / x.nrows() as f64
 }
 
