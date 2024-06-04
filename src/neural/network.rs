@@ -65,7 +65,6 @@ impl NeuralNetwork {
                 let loss = loss_f.0(actual.to_owned(), expected.clone());
                 let dL_dy = loss_f.1(actual.to_owned(), expected.clone());
 
-                println!("{}", loss);
                 self.backward(&dL_dy);
 
                 for layer in self.layers.iter_mut() {

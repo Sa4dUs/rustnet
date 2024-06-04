@@ -8,17 +8,17 @@ use rand::Rng;
 use rand::SeedableRng;
 use neural_network::lib::math::{probability_density_function};
 use neural_network::lib::math::ActivationFunctionsEnum::SIGMOID;
-use neural_network::lib::math::ErrorFunctionsEnum::MSE;
+use neural_network::lib::math::ErrorFunctionsEnum::{MSE, SOFTMAX_CROSS_ENTROPY};
 use neural_network::lib::network_parser::{load_from, save_to};
 use neural_network::neural::network::NeuralNetwork;
 
 fn main() {
-    let inputs = 0..7;
-    let outputs = 7..8;
-    let output_values: usize = 2;
+    let inputs = 0..20;
+    let outputs = 20..21;
+    let output_values: usize = 4;
     let is_classification: bool = true;
-    let training_file_path: &str = "banana_quality.csv";
-    let test_file_path: &str = "banana_quality.csv";
+    let training_file_path: &str = "train_phone.csv";
+    let test_file_path: &str = "train_phone.csv";
 
     let csv_out = read_csv_to_neural_input(training_file_path, &inputs, &outputs, is_classification, output_values).expect("csv reading failed");
     let x_train = csv_out[0].clone();
@@ -30,11 +30,11 @@ fn main() {
 
     let mut rng = StdRng::seed_from_u64(1);
 
-    let mut nn = NeuralNetwork::new(inputs.len(), vec![(4, SIGMOID), (output_values, SIGMOID)], &mut rng);
+    let mut nn = NeuralNetwork::new(inputs.len(), vec![(6, SIGMOID), (output_values, SIGMOID)], &mut rng);
 
-    let loss_f = MSE;
+    let loss_f = SOFTMAX_CROSS_ENTROPY;
     let learning_rate = 0.03;
-    let epochs = 10;
+    let epochs = 100;
     let threshold = 0.05;
 
     nn.train(&x_train, &y_train, learning_rate, loss_f, epochs);
