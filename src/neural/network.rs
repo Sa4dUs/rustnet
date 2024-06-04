@@ -83,9 +83,8 @@ impl NeuralNetwork {
             let (input, expected) = it;
             let actual = self.get_output(&input);
 
-            println!("Result: {} Expected: {}", actual, expected);
-
             let loss = loss_f.0(actual.to_owned(), expected.clone());
+            println!("Result: {} Expected: {} Loss: {}", actual, expected, loss);
 
             if loss < threshold {
                 hits += 1;
