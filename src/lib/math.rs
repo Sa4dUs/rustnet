@@ -2,7 +2,7 @@ use std::any::{type_name, type_name_of_val};
 use std::collections::HashMap;
 use std::iter::{Iterator, Map};
 use std::sync::RwLock;
-use ndarray::{Array2, ArrayBase, OwnedRepr};
+use ndarray::{Array2, ArrayBase, Axis, OwnedRepr};
 use ndarray_rand::rand_distr::num_traits::Pow;
 use ndarray_rand::rand_distr::num_traits::real::Real;
 use lazy_static::lazy_static;
@@ -64,7 +64,7 @@ fn tanh(t: Array2<f64>) -> Array2<f64> {
 }
 
 fn tanh_derivative(t: Array2<f64>) -> Array2<f64> {
-    1.0 - get_activation_function("TANH").unwrap().0(t).mapv(|e| (e).powi(2))
+    1.0 - tanh(t).mapv(|e| (e).powi(2))
 }
 
 fn relu(t: Array2<f64>) -> Array2<f64> {
@@ -121,6 +121,33 @@ fn cross_entropy_derivative(x: Array2<f64>, y: Array2<f64>) -> Array2<f64> {
     y.clone()/x.clone() + (1.0-y)/(1.0-x)
 }
 
+pub const SOFTMAX_CROSS_ENTROPY: ErrorFunction = (
+    |x: Array2<f64>, y: Array2<f64>| -> f64 {
+        let softmax = |row: &Array2<f64>| -> Array2<f64> {
+            let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
+            let exp_x = row - &max_x;
+            let exp_x = exp_x.mapv(|xi| xi.exp());
+            let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
+            exp_x / sum_exp_x
+        };
+
+        let probs = softmax(&x);
+        let log_likelihood = y * &probs.mapv(f64::ln);
+        -log_likelihood.sum() / x.nrows() as f64
+    },
+    |x: Array2<f64>, y: Array2<f64>| -> Array2<f64> {
+        let softmax = |row: &Array2<f64>| -> Array2<f64> {
+            let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
+            let exp_x = row - &max_x;
+            let exp_x = exp_x.mapv(|xi| xi.exp());
+            let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
+            exp_x / sum_exp_x
+        };
+
+        let probs = softmax(&x);
+        (probs - y) / x.nrows() as f64
+    }
+);
 
 pub fn get_error_function(name: &str) -> Option<ErrorFunction> {
     let map = ERROR_FUNCTIONS.read().unwrap();

@@ -17,7 +17,6 @@ pub fn save_to(data: Vec<(Vec<Array2<f64>>, String)>, dir: &str) -> std::io::Res
     let file = File::create(path)?;
     let writer = BufWriter::new(file);
 
-    // Convertir los datos a Vec<Data>
     let data: Vec<Data> = data.into_iter().map(|(array, label)| Data { array, label }).collect();
 
     serde_json::to_writer(writer, &data)?;
@@ -29,10 +28,8 @@ pub fn load_from(dir: &str) -> std::io::Result<Vec<(Vec<Array2<f64>>, String)>> 
     let file = File::open(path)?;
     let reader = BufReader::new(file);
 
-    // Leer los datos como Vec<Data>
     let data: Vec<Data> = serde_json::from_reader(reader)?;
 
-    // Convertir los datos a Vec<(Vec<Array2<f64>>, String)>
     let data: Vec<(Vec<Array2<f64>>, String)> = data.into_iter().map(|Data { array, label }| (array, label)).collect();
 
     Ok(data)
