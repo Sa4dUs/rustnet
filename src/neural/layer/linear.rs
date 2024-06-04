@@ -1,7 +1,7 @@
 use ndarray::Array2;
 use rand::rngs::StdRng;
 use rand::Rng;
-use crate::lib::math::{ActivationFunction, RELU};
+use crate::lib::math::{ActivationFunction, ActivationFunctionsEnum, get_activation_function};
 
 use crate::neural::layer::layer::NeuralLayer;
 
@@ -14,6 +14,8 @@ pub struct LinearLayer {
 
     pub dy_dW: Option<Array2<f64>>,
     pub act_f: ActivationFunction,
+
+    act_name: String
 }
 
 impl NeuralLayer for LinearLayer {
@@ -49,20 +51,31 @@ impl NeuralLayer for LinearLayer {
         self.b =
             self.b.clone() - self.dL_db.clone().expect("No gradient registered") * learning_rate;
     }
+
+    fn save(&self) -> (Vec<Array2<f64>>, &str) {
+        (vec![self.W.clone(), self.b.clone()], self.act_name.as_str())
+    }
+
+    fn load(&mut self, parameters: (Vec<Array2<f64>>, &str)) {
+        self.W = parameters.0[0].clone();
+        self.b = parameters.0[1].clone()
+    }
 }
 
 impl LinearLayer {
-    pub fn new(input_size: usize, output_size: usize, act_f: ActivationFunction, rng: &mut StdRng) -> Self {
+    pub fn new(input_size: usize, output_size: usize, act_f: &str, rng: &mut StdRng) -> Self {
         let W = Array2::from_shape_fn((output_size, input_size), |_| rng.gen::<f64>());
         let b = Array2::from_shape_fn((output_size, 1), |_| rng.gen::<f64>());
-
+        let act_name: String = act_f.to_owned();
+        let  act_f = get_activation_function(act_f).unwrap();
         LinearLayer {
             W,
             b,
             dL_dW: None,
             dL_db: None,
             dy_dW: None,
-            act_f
+            act_f,
+            act_name
         }
     }
 }
