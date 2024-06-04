@@ -124,16 +124,16 @@ fn cross_entropy_derivative(x: Array2<f64>, y: Array2<f64>) -> Array2<f64> {
     y.clone()/x.clone() + (1.0-y)/(1.0-x)
 }
 
+fn softmax(row: &Array2<f64>) -> Array2<f64>
+{
+    let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
+    let exp_x = row - &max_x;
+    let exp_x = exp_x.mapv(|xi| xi.exp());
+    let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
+    exp_x / sum_exp_x
+}
 fn softmax_cross_entropy(x: Array2<f64>, y: Array2<f64>) -> f64
 {
-    let softmax = |row: &Array2<f64>| -> Array2<f64> {
-        let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
-        let exp_x = row - &max_x;
-        let exp_x = exp_x.mapv(|xi| xi.exp());
-        let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
-        exp_x / sum_exp_x
-    };
-
     let probs = softmax(&x);
     let log_likelihood = y * &probs.mapv(f64::ln);
     -log_likelihood.sum() / x.nrows() as f64
@@ -141,14 +141,6 @@ fn softmax_cross_entropy(x: Array2<f64>, y: Array2<f64>) -> f64
 
 fn softmax_cross_entropy_derivative(x: Array2<f64>, y: Array2<f64>) -> Array2<f64>
 {
-    let softmax = |row: &Array2<f64>| -> Array2<f64> {
-        let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
-        let exp_x = row - &max_x;
-        let exp_x = exp_x.mapv(|xi| xi.exp());
-        let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
-        exp_x / sum_exp_x
-    };
-
     let probs = softmax(&x);
     (probs - y) / x.nrows() as f64
 }
