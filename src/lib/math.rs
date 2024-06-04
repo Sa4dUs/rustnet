@@ -84,14 +84,16 @@ pub fn get_activation_function(name: &str) -> Option<ActivationFunction> {
 #[derive(Clone, Copy)]
 pub enum ErrorFunctionsEnum {
     MSE,
-    CROSS_ENTROPY
+    CROSS_ENTROPY,
+    SOFTMAX_CROSS_ENTROPY
 }
 
 impl ErrorFunctionsEnum {
     pub fn as_str(&self) -> &'static str {
         match *self {
             ErrorFunctionsEnum::MSE => "MSE",
-            ErrorFunctionsEnum::CROSS_ENTROPY => "CROSS_ENTROPY"
+            ErrorFunctionsEnum::CROSS_ENTROPY => "CROSS_ENTROPY",
+            ErrorFunctionsEnum::SOFTMAX_CROSS_ENTROPY => "SOFTMAX_CROSS_ENTROPY"
         }
     }
 }
@@ -101,6 +103,7 @@ lazy_static! {
         let mut map = HashMap::new();
         map.insert("MSE", (mse as fn(Array2<f64>, Array2<f64>) -> f64, mse_derivative as fn(Array2<f64>, Array2<f64>) -> Array2<f64>));
         map.insert("CROSS_ENTROPY", (cross_entropy as fn(Array2<f64>, Array2<f64>) -> f64, cross_entropy_derivative as fn(Array2<f64>, Array2<f64>) -> Array2<f64>));
+        map.insert("SOFTMAX_CROSS_ENTROPY", (softmax_cross_entropy as fn(Array2<f64>, Array2<f64>) -> f64, softmax_cross_entropy_derivative as fn(Array2<f64>, Array2<f64>) -> Array2<f64>));
         RwLock::new(map)
     };
 }
@@ -121,33 +124,34 @@ fn cross_entropy_derivative(x: Array2<f64>, y: Array2<f64>) -> Array2<f64> {
     y.clone()/x.clone() + (1.0-y)/(1.0-x)
 }
 
-pub const SOFTMAX_CROSS_ENTROPY: ErrorFunction = (
-    |x: Array2<f64>, y: Array2<f64>| -> f64 {
-        let softmax = |row: &Array2<f64>| -> Array2<f64> {
-            let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
-            let exp_x = row - &max_x;
-            let exp_x = exp_x.mapv(|xi| xi.exp());
-            let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
-            exp_x / sum_exp_x
-        };
+fn softmax_cross_entropy(x: Array2<f64>, y: Array2<f64>) -> f64
+{
+    let softmax = |row: &Array2<f64>| -> Array2<f64> {
+        let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
+        let exp_x = row - &max_x;
+        let exp_x = exp_x.mapv(|xi| xi.exp());
+        let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
+        exp_x / sum_exp_x
+    };
 
-        let probs = softmax(&x);
-        let log_likelihood = y * &probs.mapv(f64::ln);
-        -log_likelihood.sum() / x.nrows() as f64
-    },
-    |x: Array2<f64>, y: Array2<f64>| -> Array2<f64> {
-        let softmax = |row: &Array2<f64>| -> Array2<f64> {
-            let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
-            let exp_x = row - &max_x;
-            let exp_x = exp_x.mapv(|xi| xi.exp());
-            let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
-            exp_x / sum_exp_x
-        };
+    let probs = softmax(&x);
+    let log_likelihood = y * &probs.mapv(f64::ln);
+    -log_likelihood.sum() / x.nrows() as f64
+}
 
-        let probs = softmax(&x);
-        (probs - y) / x.nrows() as f64
-    }
-);
+fn softmax_cross_entropy_derivative(x: Array2<f64>, y: Array2<f64>) -> Array2<f64>
+{
+    let softmax = |row: &Array2<f64>| -> Array2<f64> {
+        let max_x = row.map_axis(Axis(1), |x| *x.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap());
+        let exp_x = row - &max_x;
+        let exp_x = exp_x.mapv(|xi| xi.exp());
+        let sum_exp_x = exp_x.sum_axis(Axis(1)).insert_axis(Axis(1));
+        exp_x / sum_exp_x
+    };
+
+    let probs = softmax(&x);
+    (probs - y) / x.nrows() as f64
+}
 
 pub fn get_error_function(name: &str) -> Option<ErrorFunction> {
     let map = ERROR_FUNCTIONS.read().unwrap();
