@@ -6,7 +6,10 @@ use neural_network::lib::csv_loader::read_csv_to_neural_input;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use neural_network::lib::math::{CROSS_ENTROPY, MSE, probability_density_function, RELU, SIGMOID};
+use neural_network::lib::math::{probability_density_function};
+use neural_network::lib::math::ActivationFunctionsEnum::SIGMOID;
+use neural_network::lib::math::ErrorFunctionsEnum::MSE;
+use neural_network::lib::network_parser::{load_from, save_to};
 use neural_network::neural::network::NeuralNetwork;
 
 fn main() {
@@ -29,11 +32,14 @@ fn main() {
 
     let mut nn = NeuralNetwork::new(inputs.len(), vec![(4, SIGMOID), (output_values, SIGMOID)], &mut rng);
 
-    let loss_f = CROSS_ENTROPY;
+    let loss_f = MSE;
     let learning_rate = 0.03;
     let epochs = 10;
     let threshold = 0.05;
 
     nn.train(&x_train, &y_train, learning_rate, loss_f, epochs);
     nn.test(&x_test, &y_test, loss_f, threshold);
+
+    nn.save("Testo");
+
 }
