@@ -3,13 +3,14 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use crate::lib::math::{ActivationFunction, ActivationFunctionsEnum, ErrorFunction, ErrorFunctionsEnum, get_activation_function, get_error_function};
 use crate::lib::network_parser::{load_from, save_to};
+use crate::lib::safe_f64::SafeF64;
 use crate::neural::layer::layer::NeuralLayer;
+
 use crate::neural::layer::linear::LinearLayer;
 
 pub struct NeuralNetwork {
     pub layers: Vec<Box<dyn NeuralLayer>>
 }
-
 impl NeuralNetwork {
     pub fn new_empty() -> Self {
         NeuralNetwork { layers: vec![] }
@@ -30,7 +31,7 @@ impl NeuralNetwork {
         NeuralNetwork { layers }
     }
 
-    pub fn get_output(&self, x: &Array2<f64>) -> Array2<f64> {
+    pub fn get_output(&self, x: &Array2<SafeF64>) -> Array2<SafeF64> {
         let mut x = x.clone();
         for layer in &self.layers {
             x = layer.get_output(&x);
@@ -38,7 +39,7 @@ impl NeuralNetwork {
         x
     }
 
-    pub fn forward(&mut self, x: &Array2<f64>) -> Array2<f64> {
+    pub fn forward(&mut self, x: &Array2<SafeF64>) -> Array2<SafeF64> {
         let mut x = x.clone();
         for layer in self.layers.iter_mut() {
             x = layer.forward(&x);
@@ -46,7 +47,9 @@ impl NeuralNetwork {
         x
     }
 
-    pub fn backward(&mut self, dy: &Array2<f64>) -> Array2<f64> {
+    pub fn backward(&mut self, dy: &Array2<SafeF64>) -> Array2<SafeF64> {
+        println!("Iteration");
+        println!();
         let mut dy = dy.clone();
         for layer in self.layers.iter_mut().rev() {
             dy = layer.backward(&dy);
@@ -54,7 +57,7 @@ impl NeuralNetwork {
         dy
     }
 
-    pub fn train(&mut self, x: &Vec<Array2<f64>>, y: &Vec<Array2<f64>>, learning_rate: f64, loss_f: ErrorFunctionsEnum, epochs: usize) {
+    pub fn train(&mut self, x: &Vec<Array2<SafeF64>>, y: &Vec<Array2<SafeF64>>, learning_rate: SafeF64, loss_f: ErrorFunctionsEnum, epochs: usize) {
 
         let loss_f = get_error_function(loss_f.as_str()).unwrap();
         for _ in 1..epochs {
@@ -74,7 +77,7 @@ impl NeuralNetwork {
         }
     }
 
-    pub fn test(&mut self, x: &Vec<Array2<f64>>, y: &Vec<Array2<f64>>, loss_f: ErrorFunctionsEnum, threshold: f64) {
+    pub fn test(&mut self, x: &Vec<Array2<SafeF64>>, y: &Vec<Array2<SafeF64>>, loss_f: ErrorFunctionsEnum, threshold: SafeF64) {
         let size = x.len();
         let mut hits = 0;
         let loss_f = get_error_function(loss_f.as_str()).unwrap();
@@ -95,7 +98,7 @@ impl NeuralNetwork {
     }
 
     pub fn save(&self, name: &str){
-        let mut parameters: Vec<(Vec<Array2<f64>>, String)> = vec![];
+        let mut parameters: Vec<(Vec<Array2<SafeF64>>, String)> = vec![];
         for layer in &self.layers {
             let (params, act_name) = layer.save();
             parameters.push((params, act_name.to_string()));

@@ -4,8 +4,10 @@ use std::fs::File;
 use std::ops::Range;
 use csv::ReaderBuilder;
 use ndarray::{Array, Array2, Axis};
+use ndarray_rand::rand_distr::num_traits::real::Real;
+use crate::lib::safe_f64::SafeF64;
 
-pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, result_indexes: &Range<usize>, is_classification: bool, classification_values: usize) -> Result<Vec<Vec<Array2<f64>>>, Box<dyn Error>> {
+pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, result_indexes: &Range<usize>, is_classification: bool, classification_values: usize) -> Result<Vec<Vec<Array2<SafeF64>>>, Box<dyn Error>> {
     //Setup file path
     let mut path = env::current_dir().expect("Failed to get current directory");
     path = path.join("data").join(file_path);
@@ -16,8 +18,8 @@ pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, re
 
     //Ready vector outputs
     let mut headers: Vec<String> = Vec::new();
-    let mut inputs: Vec<Array2<f64>> = Vec::new();
-    let mut outputs: Vec<Array2<f64>> = Vec::new();
+    let mut inputs: Vec<Array2<SafeF64>> = Vec::new();
+    let mut outputs: Vec<Array2<SafeF64>> = Vec::new();
 
     if let Some(result) = rdr.headers().ok()
     {
@@ -33,14 +35,15 @@ pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, re
 
         let record = result?;
 
-        let mut inputs_temp = vec![0.0; input_size];
-        let mut outputs_temp: Vec<f64> = vec![0.0; output_size];
+        let mut inputs_temp = vec![SafeF64::new(0.0); input_size];
+        let mut outputs_temp: Vec<SafeF64> = vec![SafeF64::new(0.0); output_size];
 
         //Iterate through columns in row
         let mut j = 0;
         for (i, value) in record.iter().enumerate() {
-            if let Ok(num) = value.parse::<f64>()
+            if let Ok(num) =value.parse::<f64>()
             {
+                let num = SafeF64::new(num);
                 if data_indexes.contains(&i)
                 {
                     //Push inputs to temp
@@ -49,15 +52,15 @@ pub fn read_csv_to_neural_input(file_path: &str, data_indexes: &Range<usize>, re
                 {
                     if is_classification
                     {
-                        //Parse from f64 to usize
+                        //Parse from SafeF64 to usize
                         let mut out_index: usize = 0;
-                        if num >= 0.0 && num.is_finite()
+                        if num >= SafeF64::new(0.0) && num.0.is_finite()
                         {
-                            out_index = num.round() as usize;
+                            out_index = num.0.round() as usize;
                         }
 
                         // Push outputs to temp
-                        outputs_temp[out_index] = 1.0;
+                        outputs_temp[out_index] = SafeF64::new(1.0);
                     }
                     else
                     {

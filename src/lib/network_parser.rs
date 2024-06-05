@@ -5,14 +5,15 @@ use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
 use ndarray::Array2;
 use serde_json;
+use crate::lib::safe_f64::SafeF64;
 
 #[derive(Serialize, Deserialize)]
 pub struct Data {
-    array: Vec<Array2<f64>>,
+    array: Vec<Array2<SafeF64>>,
     label: String,
 }
 
-pub fn save_to(data: Vec<(Vec<Array2<f64>>, String)>, dir: &str) -> std::io::Result<()> {
+pub fn save_to(data: Vec<(Vec<Array2<SafeF64>>, String)>, dir: &str) -> std::io::Result<()> {
     let path = get_dir(dir);
     let file = File::create(path)?;
     let writer = BufWriter::new(file);
@@ -23,14 +24,14 @@ pub fn save_to(data: Vec<(Vec<Array2<f64>>, String)>, dir: &str) -> std::io::Res
     Ok(())
 }
 
-pub fn load_from(dir: &str) -> std::io::Result<Vec<(Vec<Array2<f64>>, String)>> {
+pub fn load_from(dir: &str) -> std::io::Result<Vec<(Vec<Array2<SafeF64>>, String)>> {
     let path = get_dir(dir);
     let file = File::open(path)?;
     let reader = BufReader::new(file);
 
     let data: Vec<Data> = serde_json::from_reader(reader)?;
 
-    let data: Vec<(Vec<Array2<f64>>, String)> = data.into_iter().map(|Data { array, label }| (array, label)).collect();
+    let data: Vec<(Vec<Array2<SafeF64>>, String)> = data.into_iter().map(|Data { array, label }| (array, label)).collect();
 
     Ok(data)
 }
