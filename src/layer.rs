@@ -2,7 +2,7 @@ use rand::Rng;
 
 use crate::{re_lu, ActivationFunction};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Layer<const IN_SIZE: usize, const OUT_SIZE: usize> {
     weights: [[f32; OUT_SIZE]; IN_SIZE],
     biases: [f32; OUT_SIZE],
@@ -29,11 +29,11 @@ impl<const IN_SIZE: usize, const OUT_SIZE: usize> Layer<IN_SIZE, OUT_SIZE> {
 
     pub fn forward(&self, input: [f32; IN_SIZE]) -> [f32; OUT_SIZE] {
         let mut output: [f32; OUT_SIZE] = self.biases;
-        for i in 1..OUT_SIZE {
-            for j in 1..IN_SIZE {
+        (0..OUT_SIZE).for_each(|i| {
+            (0..IN_SIZE).for_each(|j| {
                 output[i] += self.weights[j][i] * input[j];
-            }
-        }
+            });
+        });
 
         (self.act_f)(&mut output);
         output

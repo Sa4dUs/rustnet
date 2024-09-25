@@ -15,10 +15,10 @@ pub fn re_lu_prime(input: &mut [f32]) {
 }
 
 pub fn softmax(input: &mut [f32]) {
-    let mut max: f32 = 0.0;
+    let mut max: f32 = input[0];
     let mut sum: f32 = 0.0;
 
-    (0..input.len()).for_each(|i| max = f32::max(input[i], max));
+    (1..input.len()).for_each(|i| max = f32::max(input[i], max));
     (0..input.len()).for_each(|i| {
         input[i] = f32::exp(input[i] - max);
         sum += input[i];
