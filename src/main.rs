@@ -1,10 +1,8 @@
-use std::fmt::Debug;
-use std::fs::File;
-use std::io::{self, BufReader, Read};
-use std::io::Result;
-
-use rand::seq::SliceRandom;
-use rustnet::{layer::Layer, re_lu_prime};
+use mnist::*;
+use ndarray::prelude::*;
+use rand::Rng;
+use std::alloc::{alloc, Layout};
+use std::ptr;
 
 const INPUT_SIZE: usize = 784;
 const HIDDEN_SIZE: usize = 256;
@@ -12,186 +10,267 @@ const OUTPUT_SIZE: usize = 10;
 const LEARNING_RATE: f32 = 0.001f32;
 const EPOCHS: usize = 20;
 const BATCH_SIZE: usize = 64;
-const IMAGE_SIZE: usize = 28;
-const TRAIN_SPLIT: f32 = 0.8f32;
+const _IMAGE_SIZE: usize = 28;
+const _TRAIN_SPLIT: f32 = 0.8f32;
 
-const TRAIN_IMG_PATH: &str = "data/train-images.idx3-ubyte";
-const TRAIN_LBL_PATH: &str = "data/train-labels.idx1-ubyte";
-
-#[derive(Clone, Copy, Debug)]
-struct Network<const IN_SIZE: usize, const HID_SIZE: usize, const OUT_SIZE: usize> {
-    hidden: Layer<IN_SIZE, HID_SIZE>,
-    output: Layer<HID_SIZE, OUT_SIZE>,
+struct Layer {
+    weights: *mut f32,
+    biases: *mut f32,
+    input_size: usize,
+    output_size: usize,
 }
 
-impl<const IN_SIZE: usize, const HID_SIZE: usize, const OUT_SIZE: usize>
-    Network<IN_SIZE, HID_SIZE, OUT_SIZE>
-{
-    fn new(
-        hidden: Layer<IN_SIZE, HID_SIZE>,
-        output: Layer<HID_SIZE, OUT_SIZE>,
-    ) -> Network<IN_SIZE, HID_SIZE, OUT_SIZE> {
-        Network { hidden, output }
+impl Default for Layer {
+    fn default() -> Self {
+        Self {
+            weights: ptr::null_mut(),
+            biases: ptr::null_mut(),
+            input_size: Default::default(),
+            output_size: Default::default(),
+        }
+    }
+}
+
+#[derive(Default)]
+struct Network {
+    hidden: Layer,
+    output: Layer,
+}
+
+fn softmax(input: *mut f32, size: usize) {
+    let mut max: f32 = unsafe { *input.add(0) };
+    let mut sum: f32 = 0.0f32;
+
+    for i in 1..size {
+        if unsafe { *input.add(i) } > max {
+            max = unsafe { *input.add(i) }
+        }
     }
 
-    fn train(&mut self, input: [f32; IN_SIZE], label: usize, alpha: f32) {
-        let hidden_output: [f32; HID_SIZE] = self.hidden.forward(input);
-        let final_output: [f32; OUT_SIZE] = self.output.forward(hidden_output);
-
-        let mut output_grad: [f32; OUT_SIZE] = [0.0f32; OUT_SIZE];
-
-        (0..OUT_SIZE).for_each(|i| {
-            output_grad[i] = final_output[i] - ((i == label) as u8 as f32);
-        });
-
-        let mut hidden_grad: [f32; HID_SIZE] =
-            self.output.backward(hidden_output, output_grad, alpha);
-        re_lu_prime(&mut hidden_grad);
-
-        self.hidden.backward(input, hidden_grad, alpha);
+    for i in 0..size {
+        unsafe { *input.add(i) = f32::exp(*input.add(i) - max) };
+        sum += unsafe { *input.add(i) };
     }
 
-    fn predict(&self, input: [f32; IN_SIZE]) -> usize {
-        let hidden_output: [f32; HID_SIZE] = self.hidden.forward(input);
-        let final_output: [f32; OUT_SIZE] = self.output.forward(hidden_output);
+    for i in 0..size {
+        unsafe { *input.add(i) /= sum };
+    }
+}
 
-        let mut max_index: usize = 0;
+fn init_layer(layer: &mut Layer, in_size: usize, out_size: usize) {
+    let n: usize = in_size * out_size;
+    let scale: f32 = f32::sqrt(2.0f32 / in_size as f32);
 
-        (1..OUT_SIZE).for_each(|i| {
-            if final_output[i] > final_output[max_index] {
-                max_index = i;
+    layer.input_size = in_size;
+    layer.output_size = out_size;
+
+    {
+        let layout: Layout = Layout::array::<f32>(n).unwrap();
+        layer.weights = unsafe { alloc(layout) } as *mut f32;
+    }
+
+    {
+        let layout: Layout = Layout::array::<f32>(out_size).unwrap();
+        layer.biases = unsafe { alloc(layout) } as *mut f32;
+        unsafe { ptr::write_bytes(layer.biases, 0, out_size) };
+    }
+
+    let mut rng = rand::thread_rng();
+    for i in 0..n {
+        unsafe {
+            *layer.weights.add(i) = ((rng.gen_range(0.0f32..=1.0) - 0.5f32) * 2.0f32) * scale
+        };
+    }
+}
+
+fn forward(layer: &Layer, input: *const f32, output: *mut f32) {
+    for i in 0..layer.output_size {
+        unsafe { *output.add(i) = *layer.biases.add(i) };
+        for j in 0..layer.input_size {
+            unsafe {
+                *output.add(i) += *input.add(j) * *layer.weights.add(j * layer.output_size + i)
             }
-        });
-
-        max_index
+        }
     }
 }
 
-fn read_mnist_images(filename: &str) -> io::Result<(Vec<Vec<u8>>, usize, usize)> {
-    let file = File::open(filename)?;
-    let mut reader = BufReader::new(file);
+fn backward(
+    layer: &mut Layer,
+    input: *const f32,
+    output_grad: *const f32,
+    input_grad: *mut f32,
+    lr: f32,
+) {
+    for i in 0..layer.output_size {
+        for j in 0..layer.input_size {
+            let idx: usize = j * layer.output_size + i;
+            let grad: f32 = unsafe { *output_grad.add(i) } * unsafe { *input.add(j) };
+            unsafe { *layer.weights.add(idx) -= lr * grad };
 
-    let mut header = [0u8; 16];
-    reader.read_exact(&mut header)?;
+            if !input_grad.is_null() {
+                unsafe { *input_grad.add(j) += *output_grad.add(i) * *layer.weights.add(idx) };
+            }
+        }
 
-    let magic_number = u32::from_be_bytes([header[0], header[1], header[2], header[3]]);
-    let num_images = u32::from_be_bytes([header[4], header[5], header[6], header[7]]) as usize;
-    let num_rows = u32::from_be_bytes([header[8], header[9], header[10], header[11]]) as usize;
-    let num_cols = u32::from_be_bytes([header[12], header[13], header[14], header[15]]) as usize;
-
-    if magic_number != 2051 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "Invalid magic number for image file",
-        ));
+        unsafe { *layer.biases.add(i) -= lr * *output_grad.add(i) };
     }
-
-    let mut images = Vec::with_capacity(num_images);
-    let mut image_data = vec![0u8; num_rows * num_cols];
-
-    for _ in 0..num_images {
-        reader.read_exact(&mut image_data)?;
-        images.push(image_data.clone());
-    }
-
-    Ok((images, num_rows, num_cols))
 }
 
-fn read_mnist_labels(filename: &str) -> io::Result<Vec<u8>> {
-    let file = File::open(filename)?;
-    let mut reader = BufReader::new(file);
+fn train(net: &mut Network, input: *const f32, label: u8, lr: f32) {
+    let mut hidden_output: [f32; HIDDEN_SIZE] = [0.0f32; HIDDEN_SIZE];
+    let mut final_output: [f32; OUTPUT_SIZE] = [0.0f32; OUTPUT_SIZE];
 
-    let mut header = [0u8; 8];
-    reader.read_exact(&mut header)?;
+    let mut output_grad: [f32; OUTPUT_SIZE] = [0.0f32; OUTPUT_SIZE];
+    let mut hidden_grad: [f32; HIDDEN_SIZE] = [0.0f32; HIDDEN_SIZE];
 
-    let magic_number = u32::from_be_bytes([header[0], header[1], header[2], header[3]]);
-    let num_labels = u32::from_be_bytes([header[4], header[5], header[6], header[7]]) as usize;
+    forward(&net.hidden, input, hidden_output.as_mut_ptr());
 
-    if magic_number != 2049 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "Invalid magic number for label file",
-        ));
+    (0..HIDDEN_SIZE).for_each(|i| {
+        hidden_output[i] = if hidden_output[i] > 0.0f32 {
+            hidden_output[i]
+        } else {
+            0.0f32
+        };
+    });
+
+    forward(
+        &net.output,
+        hidden_output.as_ptr(),
+        final_output.as_mut_ptr(),
+    );
+    softmax(final_output.as_mut_ptr(), OUTPUT_SIZE);
+
+    for i in 0..OUTPUT_SIZE {
+        output_grad[i] = final_output[i] - ((i == label as usize) as i32 as f32);
+    }
+    backward(
+        &mut net.output,
+        hidden_output.as_ptr(),
+        output_grad.as_ptr(),
+        hidden_grad.as_mut_ptr(),
+        lr,
+    );
+
+    for i in 0..HIDDEN_SIZE {
+        hidden_grad[i] *= if hidden_output[i] > 0.0f32 {
+            1.0f32
+        } else {
+            0.0f32
+        };
     }
 
-    let mut labels = vec![0u8; num_labels];
-    reader.read_exact(&mut labels)?;
+    backward(
+        &mut net.hidden,
+        input,
+        hidden_grad.as_ptr(),
+        ptr::null_mut(),
+        lr,
+    );
+}
 
-    Ok(labels)
+fn predict(net: &Network, input: *const f32) -> usize {
+    let mut hidden_output: [f32; HIDDEN_SIZE] = [0.0f32; HIDDEN_SIZE];
+    let mut final_output: [f32; OUTPUT_SIZE] = [0.0f32; OUTPUT_SIZE];
+
+    forward(&net.hidden, input, hidden_output.as_mut_ptr());
+    (0..HIDDEN_SIZE).for_each(|i| {
+        hidden_output[i] = if hidden_output[i] > 0.0f32 {
+            hidden_output[i]
+        } else {
+            0.0f32
+        }
+    });
+
+    forward(
+        &net.output,
+        hidden_output.as_ptr(),
+        final_output.as_mut_ptr(),
+    );
+    softmax(final_output.as_mut_ptr(), OUTPUT_SIZE);
+
+    let mut max_index: usize = 0usize;
+    for i in 1..OUTPUT_SIZE {
+        if final_output[i] > final_output[max_index] {
+            max_index = i;
+        }
+    }
+
+    max_index
 }
 
 fn main() {
-    const N: usize = 1_000_000;
+    let mut net: Network = Network::default();
+    init_layer(&mut net.hidden, INPUT_SIZE, HIDDEN_SIZE);
+    init_layer(&mut net.output, HIDDEN_SIZE, OUTPUT_SIZE);
 
-    let _ = std::thread::Builder::new()
-        .stack_size(size_of::<f32>() * N)
-        .spawn(|| -> Result<()> {
-            let (images, rows, cols) = read_mnist_images(TRAIN_IMG_PATH)?;
-            let labels = read_mnist_labels(TRAIN_LBL_PATH)?;
+    let learning_rate: f32 = LEARNING_RATE;
 
-            assert_eq!(rows * cols, INPUT_SIZE);
+    let Mnist {
+        trn_img, trn_lbl, ..
+    } = MnistBuilder::new()
+        .label_format_digit()
+        .training_set_length(50_000)
+        .validation_set_length(10_000)
+        .test_set_length(10_000)
+        .finalize();
 
-            let mut data: Vec<(Vec<u8>, u8)> = images.into_iter().zip(labels).collect();
-            let mut rng = rand::thread_rng();
-            data.shuffle(&mut rng);
+    let train_data = Array3::from_shape_vec((50_000, 28, 28), trn_img)
+        .expect("Error converting images to Array3 struct")
+        .map(|x| *x as f32 / 255.0);
 
-            let train_size = (data.len() as f32 * TRAIN_SPLIT) as usize;
-            let test_size = data.len() - train_size;
-            let (train_data, test_data) = data.split_at(train_size);
+    let train_labels: Vec<u8> = trn_lbl;
+    let train_size = train_labels.len();
 
-            let hidden: Layer<INPUT_SIZE, HIDDEN_SIZE> = Layer::new(rustnet::re_lu);
-            let output: Layer<HIDDEN_SIZE, OUTPUT_SIZE> = Layer::new(rustnet::softmax);
-            let mut nn: Network<INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE> =
-                Network::new(hidden, output);
-
-            for epoch in 0..EPOCHS {
-                let mut total_loss = 0.0;
-
-                for batch in train_data.chunks(BATCH_SIZE) {
-                    for (image, label) in batch {
-                        let mut img: [f32; INPUT_SIZE] = [0.0f32; INPUT_SIZE];
-                        (0..INPUT_SIZE).for_each(|i| {
-                            img[i] = image[i] as f32 / 255.0;
-                        });
-
-                        nn.train(img, *label as usize, LEARNING_RATE);
-
-                        let hidden_output: [f32; HIDDEN_SIZE] = nn.hidden.forward(img);
-                        let final_output: [f32; OUTPUT_SIZE] = nn.output.forward(hidden_output);
-
-                        total_loss += -(final_output[*label as usize] + 1e-10).ln();
-                    }
+    for epoch in 0..EPOCHS {
+        let mut total_loss: f32 = 0.0;
+        for i in (0..train_size).step_by(BATCH_SIZE) {
+            for j in 0..BATCH_SIZE {
+                if i + j >= train_size {
+                    break;
                 }
 
-                let mut correct = 0;
-                for (image, label) in test_data {
-                    let mut img: [f32; INPUT_SIZE] = [0.0f32; INPUT_SIZE];
-                    (0..INPUT_SIZE).for_each(|i| {
-                        img[i] = image[i] as f32 / 255.0;
-                    });
+                let idx = i + j;
+                let image = train_data
+                    .slice(s![idx, .., ..])
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<f32>>();
+                let label = train_labels[idx];
 
-                    println!(
-                        "[TEST]\nACTUAL: {}\nEXPECTED: {}\n",
-                        nn.predict(img),
-                        *label
-                    );
-
-                    if nn.predict(img) == *label as usize {
-                        correct += 1;
-                    }
-                }
-
-                let accuracy = correct as f32 / test_size as f32 * 100.0;
-                println!(
-                    "Epoch {}, Accuracy: {:.2}%, Avg Loss: {:.4}",
-                    epoch + 1,
-                    accuracy,
-                    total_loss / train_size as f32
+                train(&mut net, image.as_ptr(), label, learning_rate);
+                let mut hidden_output: [f32; HIDDEN_SIZE] = [0.0f32; HIDDEN_SIZE];
+                let mut final_output: [f32; OUTPUT_SIZE] = [0.0f32; OUTPUT_SIZE];
+                forward(&net.hidden, image.as_ptr(), hidden_output.as_mut_ptr());
+                forward(
+                    &net.output,
+                    hidden_output.as_ptr(),
+                    final_output.as_mut_ptr(),
                 );
+                softmax(final_output.as_mut_ptr(), OUTPUT_SIZE);
+
+                total_loss += -f32::ln(final_output[label as usize] + 1e-10);
             }
-            Ok(())
-        })
-        .unwrap()
-        .join()
-        .unwrap();
+        }
+
+        let mut correct: i32 = 0;
+        (0..train_size).for_each(|i| {
+            let image = train_data
+                .slice(s![i, .., ..])
+                .iter()
+                .cloned()
+                .collect::<Vec<f32>>();
+            let prediction = predict(&net, image.as_ptr());
+
+            if prediction == train_labels[i] as usize {
+                correct += 1;
+            }
+        });
+
+        println!(
+            "Epoch {}, Accuracy: {}%, Avg Loss: {}",
+            epoch + 1,
+            correct as f32 / train_size as f32 * 100.0,
+            total_loss / train_size as f32
+        );
+    }
 }
