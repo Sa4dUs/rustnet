@@ -1,8 +1,6 @@
 use mnist::*;
 use ndarray::prelude::*;
 use rand::Rng;
-use std::alloc::{alloc, Layout};
-use std::ptr;
 
 const INPUT_SIZE: usize = 784;
 const HIDDEN_SIZE: usize = 256;
@@ -14,196 +12,139 @@ const _IMAGE_SIZE: usize = 28;
 const _TRAIN_SPLIT: f32 = 0.8f32;
 
 struct Layer {
-    weights: *mut f32,
-    biases: *mut f32,
+    weights: Vec<f32>,
+    biases: Vec<f32>,
     input_size: usize,
     output_size: usize,
 }
 
-impl Default for Layer {
-    fn default() -> Self {
-        Self {
-            weights: ptr::null_mut(),
-            biases: ptr::null_mut(),
-            input_size: Default::default(),
-            output_size: Default::default(),
+impl Layer {
+    fn new(in_size: usize, out_size: usize) -> Self {
+        let mut rng = rand::thread_rng();
+        let scale = (2.0 / in_size as f32).sqrt();
+        let weights: Vec<f32> = (0..in_size * out_size)
+            .map(|_| ((rng.gen::<f32>() - 0.5) * 2.0) * scale)
+            .collect();
+        let biases: Vec<f32> = vec![0.0; out_size];
+
+        Layer {
+            weights,
+            biases,
+            input_size: in_size,
+            output_size: out_size,
         }
+    }
+
+    fn forward(&self, input: &[f32], output: &mut [f32]) {
+        (0..self.output_size).for_each(|i| {
+            output[i] = self.biases[i];
+
+            (0..self.input_size).for_each(|j| {
+                output[i] += input[j] * self.weights[j * self.output_size + i];
+            })
+        });
+    }
+
+    fn backward(
+        &mut self,
+        input: &[f32],
+        output_grad: &[f32],
+        mut input_grad: Option<&mut [f32]>,
+        lr: f32,
+    ) {
+        (0..self.output_size).for_each(|i| {
+            for j in 0..self.input_size {
+                let idx = j * self.output_size + i;
+                let grad = output_grad[i] * input[j];
+                self.weights[idx] -= lr * grad;
+
+                if let Some(input_grad) = &mut input_grad {
+                    input_grad[j] += output_grad[i] * self.weights[idx];
+                }
+            }
+
+            self.biases[i] -= lr * output_grad[i];
+        });
     }
 }
 
-#[derive(Default)]
 struct Network {
     hidden: Layer,
     output: Layer,
 }
 
-fn softmax(input: *mut f32, size: usize) {
-    let mut max: f32 = unsafe { *input.add(0) };
-    let mut sum: f32 = 0.0f32;
+fn softmax(input: &mut [f32]) {
+    let max = input.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let mut sum = 0.0;
 
-    for i in 1..size {
-        if unsafe { *input.add(i) } > max {
-            max = unsafe { *input.add(i) }
-        }
+    for val in input.iter_mut() {
+        *val = f32::exp(*val - max);
+        sum += *val;
     }
 
-    for i in 0..size {
-        unsafe { *input.add(i) = f32::exp(*input.add(i) - max) };
-        sum += unsafe { *input.add(i) };
-    }
-
-    for i in 0..size {
-        unsafe { *input.add(i) /= sum };
+    for val in input.iter_mut() {
+        *val /= sum;
     }
 }
 
-fn init_layer(layer: &mut Layer, in_size: usize, out_size: usize) {
-    let n: usize = in_size * out_size;
-    let scale: f32 = f32::sqrt(2.0f32 / in_size as f32);
-
-    layer.input_size = in_size;
-    layer.output_size = out_size;
-
-    {
-        let layout: Layout = Layout::array::<f32>(n).unwrap();
-        layer.weights = unsafe { alloc(layout) } as *mut f32;
-    }
-
-    {
-        let layout: Layout = Layout::array::<f32>(out_size).unwrap();
-        layer.biases = unsafe { alloc(layout) } as *mut f32;
-        unsafe { ptr::write_bytes(layer.biases, 0, out_size) };
-    }
-
-    let mut rng = rand::thread_rng();
-    for i in 0..n {
-        unsafe {
-            *layer.weights.add(i) = ((rng.gen_range(0.0f32..=1.0) - 0.5f32) * 2.0f32) * scale
-        };
+fn relu(input: &mut [f32]) {
+    for val in input.iter_mut() {
+        *val = if *val > 0.0 { *val } else { 0.0 };
     }
 }
 
-fn forward(layer: &Layer, input: *const f32, output: *mut f32) {
-    for i in 0..layer.output_size {
-        unsafe { *output.add(i) = *layer.biases.add(i) };
-        for j in 0..layer.input_size {
-            unsafe {
-                *output.add(i) += *input.add(j) * *layer.weights.add(j * layer.output_size + i)
-            }
-        }
-    }
-}
+fn train(net: &mut Network, input: &[f32], label: u8, lr: f32) {
+    let mut hidden_output = vec![0.0; HIDDEN_SIZE];
+    let mut final_output = vec![0.0; OUTPUT_SIZE];
 
-fn backward(
-    layer: &mut Layer,
-    input: *const f32,
-    output_grad: *const f32,
-    input_grad: *mut f32,
-    lr: f32,
-) {
-    for i in 0..layer.output_size {
-        for j in 0..layer.input_size {
-            let idx: usize = j * layer.output_size + i;
-            let grad: f32 = unsafe { *output_grad.add(i) } * unsafe { *input.add(j) };
-            unsafe { *layer.weights.add(idx) -= lr * grad };
+    net.hidden.forward(input, &mut hidden_output);
+    relu(&mut hidden_output);
 
-            if !input_grad.is_null() {
-                unsafe { *input_grad.add(j) += *output_grad.add(i) * *layer.weights.add(idx) };
-            }
-        }
+    net.output.forward(&hidden_output, &mut final_output);
+    softmax(&mut final_output);
 
-        unsafe { *layer.biases.add(i) -= lr * *output_grad.add(i) };
-    }
-}
-
-fn train(net: &mut Network, input: *const f32, label: u8, lr: f32) {
-    let mut hidden_output: [f32; HIDDEN_SIZE] = [0.0f32; HIDDEN_SIZE];
-    let mut final_output: [f32; OUTPUT_SIZE] = [0.0f32; OUTPUT_SIZE];
-
-    let mut output_grad: [f32; OUTPUT_SIZE] = [0.0f32; OUTPUT_SIZE];
-    let mut hidden_grad: [f32; HIDDEN_SIZE] = [0.0f32; HIDDEN_SIZE];
-
-    forward(&net.hidden, input, hidden_output.as_mut_ptr());
-
-    (0..HIDDEN_SIZE).for_each(|i| {
-        hidden_output[i] = if hidden_output[i] > 0.0f32 {
-            hidden_output[i]
-        } else {
-            0.0f32
-        };
-    });
-
-    forward(
-        &net.output,
-        hidden_output.as_ptr(),
-        final_output.as_mut_ptr(),
-    );
-    softmax(final_output.as_mut_ptr(), OUTPUT_SIZE);
+    let mut output_grad = vec![0.0; OUTPUT_SIZE];
+    let mut hidden_grad = vec![0.0; HIDDEN_SIZE];
 
     for i in 0..OUTPUT_SIZE {
-        output_grad[i] = final_output[i] - ((i == label as usize) as i32 as f32);
+        output_grad[i] = final_output[i] - if i == label as usize { 1.0 } else { 0.0 };
     }
-    backward(
-        &mut net.output,
-        hidden_output.as_ptr(),
-        output_grad.as_ptr(),
-        hidden_grad.as_mut_ptr(),
-        lr,
-    );
+
+    net.output
+        .backward(&hidden_output, &output_grad, Some(&mut hidden_grad), lr);
 
     for i in 0..HIDDEN_SIZE {
-        hidden_grad[i] *= if hidden_output[i] > 0.0f32 {
-            1.0f32
-        } else {
-            0.0f32
-        };
+        hidden_grad[i] *= if hidden_output[i] > 0.0 { 1.0 } else { 0.0 };
     }
 
-    backward(
-        &mut net.hidden,
-        input,
-        hidden_grad.as_ptr(),
-        ptr::null_mut(),
-        lr,
-    );
+    net.hidden.backward(input, &hidden_grad, None, lr);
 }
 
-fn predict(net: &Network, input: *const f32) -> usize {
-    let mut hidden_output: [f32; HIDDEN_SIZE] = [0.0f32; HIDDEN_SIZE];
-    let mut final_output: [f32; OUTPUT_SIZE] = [0.0f32; OUTPUT_SIZE];
+fn predict(net: &Network, input: &[f32]) -> usize {
+    let mut hidden_output = vec![0.0; HIDDEN_SIZE];
+    let mut final_output = vec![0.0; OUTPUT_SIZE];
 
-    forward(&net.hidden, input, hidden_output.as_mut_ptr());
-    (0..HIDDEN_SIZE).for_each(|i| {
-        hidden_output[i] = if hidden_output[i] > 0.0f32 {
-            hidden_output[i]
-        } else {
-            0.0f32
-        }
-    });
+    net.hidden.forward(input, &mut hidden_output);
+    relu(&mut hidden_output);
 
-    forward(
-        &net.output,
-        hidden_output.as_ptr(),
-        final_output.as_mut_ptr(),
-    );
-    softmax(final_output.as_mut_ptr(), OUTPUT_SIZE);
+    net.output.forward(&hidden_output, &mut final_output);
+    softmax(&mut final_output);
 
-    let mut max_index: usize = 0usize;
-    for i in 1..OUTPUT_SIZE {
-        if final_output[i] > final_output[max_index] {
-            max_index = i;
-        }
-    }
-
-    max_index
+    final_output
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .map(|(index, _)| index)
+        .unwrap_or(0)
 }
 
 fn main() {
-    let mut net: Network = Network::default();
-    init_layer(&mut net.hidden, INPUT_SIZE, HIDDEN_SIZE);
-    init_layer(&mut net.output, HIDDEN_SIZE, OUTPUT_SIZE);
+    let mut net = Network {
+        hidden: Layer::new(INPUT_SIZE, HIDDEN_SIZE),
+        output: Layer::new(HIDDEN_SIZE, OUTPUT_SIZE),
+    };
 
-    let learning_rate: f32 = LEARNING_RATE;
+    let learning_rate = LEARNING_RATE;
 
     let Mnist {
         trn_img, trn_lbl, ..
@@ -237,16 +178,13 @@ fn main() {
                     .collect::<Vec<f32>>();
                 let label = train_labels[idx];
 
-                train(&mut net, image.as_ptr(), label, learning_rate);
-                let mut hidden_output: [f32; HIDDEN_SIZE] = [0.0f32; HIDDEN_SIZE];
-                let mut final_output: [f32; OUTPUT_SIZE] = [0.0f32; OUTPUT_SIZE];
-                forward(&net.hidden, image.as_ptr(), hidden_output.as_mut_ptr());
-                forward(
-                    &net.output,
-                    hidden_output.as_ptr(),
-                    final_output.as_mut_ptr(),
-                );
-                softmax(final_output.as_mut_ptr(), OUTPUT_SIZE);
+                train(&mut net, &image, label, learning_rate);
+
+                let mut hidden_output = vec![0.0; HIDDEN_SIZE];
+                let mut final_output = vec![0.0; OUTPUT_SIZE];
+                net.hidden.forward(&image, &mut hidden_output);
+                net.output.forward(&hidden_output, &mut final_output);
+                softmax(&mut final_output);
 
                 total_loss += -f32::ln(final_output[label as usize] + 1e-10);
             }
@@ -259,7 +197,7 @@ fn main() {
                 .iter()
                 .cloned()
                 .collect::<Vec<f32>>();
-            let prediction = predict(&net, image.as_ptr());
+            let prediction = predict(&net, &image);
 
             if prediction == train_labels[i] as usize {
                 correct += 1;
