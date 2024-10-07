@@ -1,6 +1,5 @@
 use mnist::*;
 use ndarray::prelude::*;
-use rand::Rng;
 use rustnet::layer::Layer;
 
 const INPUT_SIZE: usize = 784;
