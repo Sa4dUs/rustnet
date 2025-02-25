@@ -1,15 +1,11 @@
 [package]
-name = "rustnet"
+name = "scorch"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "rustnet"
+name = "scorch"
 path = "src/lib.rs"
-
-[[bin]]
-name = "rustnet"
-path = "src/main.rs"
 
 [dependencies]
 mnist = "0.6.0"
