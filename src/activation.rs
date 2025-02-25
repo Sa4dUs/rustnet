@@ -3,6 +3,94 @@
 /// This type alias is used to define various activation functions in the neural network.
 pub type ActivationFunction = fn(&[f32]) -> Vec<f32>;
 
+/// `sigmoid` is an activation function that maps the input values to a range between 0 and 1,
+/// making it useful for binary classification tasks. The function outputs values close to 0 for negative inputs,
+/// and values close to 1 for positive inputs. It is commonly used in the output layer of neural networks for classification tasks.
+///
+/// # Arguments
+/// * `input` - A slice of `f32` values representing the input to the Sigmoid function.
+///
+/// # Returns
+/// * A `Vec<f32>` where each element is the result of applying the Sigmoid function to the corresponding input value.
+///
+/// # Example
+/// ```
+/// let input = vec![-1.0, 0.0, 1.0];
+/// let output = sigmoid(&input);
+/// assert_eq!(output, vec![0.26894142, 0.5, 0.7310586]);
+/// ```
+pub fn sigmoid(input: &[f32]) -> Vec<f32> {
+    input.iter().map(|&x| 1.0 / (1.0 + f32::exp(-x))).collect()
+}
+
+/// `sigmoid_derivative` computes the derivative of the Sigmoid function. It is often used
+/// during backpropagation in neural networks for optimization.
+///
+/// # Arguments
+/// * `input` - A slice of `f32` values representing the input to the Sigmoid function.
+///
+/// # Returns
+/// * A `Vec<f32>` where each element is the gradient (derivative) of the Sigmoid function with respect to the input value.
+///
+/// # Example
+/// ```
+/// let input = vec![-1.0, 0.0, 1.0];
+/// let output = sigmoid_derivative(&input);
+/// assert_eq!(output, vec![0.19661193, 0.25, 0.19661193]);
+/// ```
+pub fn sigmoid_derivative(input: &[f32]) -> Vec<f32> {
+    input
+        .iter()
+        .map(|&x| {
+            let sig = 1.0 / (1.0 + f32::exp(-x));
+            sig * (1.0 - sig)
+        })
+        .collect()
+}
+
+/// `tanh` is the hyperbolic tangent activation function, which maps input values to a range between -1 and 1.
+/// It is commonly used in the hidden layers of neural networks, as it helps mitigate the vanishing gradient problem.
+///
+/// # Arguments
+/// * `input` - A slice of `f32` values representing the input to the Tanh function.
+///
+/// # Returns
+/// * A `Vec<f32>` where each element is the result of applying the Tanh function to the corresponding input value.
+///
+/// # Example
+/// ```
+/// let input = vec![-1.0, 0.0, 1.0];
+/// let output = tanh(&input);
+/// assert_eq!(output, vec![-0.7615942, 0.0, 0.7615942]);
+/// ```
+pub fn tanh(input: &[f32]) -> Vec<f32> {
+    input.iter().map(|&x| f32::tanh(x)).collect()
+}
+
+/// `tanh_derivative` computes the derivative of the Tanh function. It is used during backpropagation to update the weights.
+///
+/// # Arguments
+/// * `input` - A slice of `f32` values representing the input to the Tanh function.
+///
+/// # Returns
+/// * A `Vec<f32>` where each element is the gradient (derivative) of the Tanh function with respect to the input value.
+///
+/// # Example
+/// ```
+/// let input = vec![-1.0, 0.0, 1.0];
+/// let output = tanh_derivative(&input);
+/// assert_eq!(output, vec![0.41997434, 1.0, 0.41997434]);
+/// ```
+pub fn tanh_derivative(input: &[f32]) -> Vec<f32> {
+    input
+        .iter()
+        .map(|&x| {
+            let tanh_val = f32::tanh(x);
+            1.0 - tanh_val.powi(2)
+        })
+        .collect()
+}
+
 /// `softmax` is an activation function that converts a vector of raw input values (often called logits)
 /// into a probability distribution, where the sum of the output values equals 1.0. It is commonly used
 /// in the output layer of neural networks for classification tasks.
