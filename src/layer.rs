@@ -22,7 +22,6 @@ impl Layer {
     /// ```
     pub fn new(in_size: usize, out_size: usize, act_f: ActivationFunction) -> Self {
         let mut rng = rand::thread_rng();
-        // Scaling factor for weight initialization, based on the input size
         let scale = (2.0 / in_size as f32).sqrt();
 
         let weights: Vec<f32> = (0..in_size * out_size)
