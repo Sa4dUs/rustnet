@@ -1,12 +1,12 @@
 [package]
 name = "scorch"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Sa4dUs"]
+license = "MIT"
 description = "A straightforward and customizable neural network crate, built for machine learning tasks."
 documentation = "https://docs.rs/scorch/"
 repository = "https://github.com/sa4dus/scorch"
-license-file = "LICENSE"
 exclude = ["tests/*", "examples/*", "data/*"]
 
 [lib]
