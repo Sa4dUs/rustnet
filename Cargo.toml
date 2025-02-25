@@ -2,12 +2,11 @@
 name = "scorch"
 version = "0.1.0"
 edition = "2021"
+authors = ["Sa4dUs"]
 
 [lib]
 name = "scorch"
 path = "src/lib.rs"
 
 [dependencies]
-mnist = "0.6.0"
-ndarray = "0.16.1"
 rand = "0.8.5"
