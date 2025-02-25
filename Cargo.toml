@@ -8,6 +8,4 @@ name = "scorch"
 path = "src/lib.rs"
 
 [dependencies]
-mnist = "0.6.0"
-ndarray = "0.16.1"
 rand = "0.8.5"
