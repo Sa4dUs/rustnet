@@ -1,4 +1,4 @@
-use crate::{activation::ActivationFunction, Layer};
+use crate::{Layer, activation::ActivationFunction};
 use rand::Rng;
 
 impl Layer {
@@ -25,7 +25,7 @@ impl Layer {
         let scale = (2.0 / in_size as f32).sqrt();
 
         let weights: Vec<f32> = (0..in_size * out_size)
-            .map(|_| ((rng.gen::<f32>() - 0.5) * 2.0) * scale)
+            .map(|_| ((rng.r#gen::<f32>() - 0.5) * 2.0) * scale)
             .collect();
         let biases: Vec<f32> = vec![0.0; out_size];
 
